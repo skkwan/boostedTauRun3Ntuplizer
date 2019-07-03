@@ -1,6 +1,6 @@
 Installation:
 
-'''
+```
 cmsrel CMSSW_10_6_0_pre4
 cd CMSSW_10_6_0_pre4/src
 cmsenv
@@ -13,4 +13,4 @@ git clone git@github.com:isobelojalvo/L1TCaloSummary.git
 git clone git@github.com:isobelojalvo/Run3Ntuplizer.git
 cd ..
 scram b -j 8
-'''
+```
