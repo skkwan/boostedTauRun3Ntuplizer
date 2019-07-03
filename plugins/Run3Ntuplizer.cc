@@ -1,144 +1,255 @@
-// -*- C++ -*-
-//
-// Package:    L1Trigger/Run3Ntuplizer
-// Class:      Run3Ntuplizer
-//
-/**\class Run3Ntuplizer Run3Ntuplizer.cc L1Trigger/Run3Ntuplizer/plugins/Run3Ntuplizer.cc
+/*
+ * \file Run3Ntuplizer.cc
+ *
+ * \author I. Ojalvo
+ * Written for miniAOD
+ */
 
- Description: [one line class summary]
-
- Implementation:
-     [Notes on implementation]
-*/
-//
-// Original Author:  Isobel Ojalvo
-//         Created:  Wed, 03 Jul 2019 10:42:41 GMT
-//
-//
-
-
-// system include files
-#include <memory>
-
-// user include files
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/one/EDAnalyzer.h"
-
-#include "FWCore/Framework/interface/Event.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+#include "DataFormats/VertexReco/interface/Vertex.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
-
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
- #include "FWCore/Utilities/interface/InputTag.h"
- #include "DataFormats/TrackReco/interface/Track.h"
- #include "DataFormats/TrackReco/interface/TrackFwd.h"
-//
-// class declaration
-//
-
-// If the analyzer does not use TFileService, please remove
-// the template argument to the base class so the class inherits
-// from  edm::one::EDAnalyzer<>
-// This will improve performance in multithreaded jobs.
+#include "L1Trigger/Run3Ntuplizer/interface/Run3Ntuplizer.h"
+#include "L1Trigger/Run3Ntuplizer/interface/L1TRegionNtupleProducer.h"
+#include "DataFormats/Provenance/interface/EventAuxiliary.h"
+#include "DataFormats/L1Trigger/interface/Tau.h"
+#include "DataFormats/Math/interface/LorentzVector.h"
+#include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/TauReco/interface/PFTau.h"
+#include "DataFormats/Common/interface/RefToPtr.h"
 
 
-using reco::TrackCollection;
+#include "DataFormats/Math/interface/deltaR.h"
+#include <iostream>
+#include <fstream>
 
-class Run3Ntuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
-   public:
-      explicit Run3Ntuplizer(const edm::ParameterSet&);
-      ~Run3Ntuplizer();
-
-      static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+using namespace edm;
+using std::cout;
+using std::endl;
+using std::vector;
 
 
-   private:
-      virtual void beginJob() override;
-      virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-      virtual void endJob() override;
+Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
+  ecalSrc_(consumes<EcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("ecalDigis"))),
+  hcalSrc_(consumes<HcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("hcalDigis"))),
+  vtxLabel_(consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"))),
+  regionSource_(consumes<vector <L1CaloRegion> >(cfg.getParameter<edm::InputTag>("UCTRegion")))
+  {
 
-      // ----------member data ---------------------------
-      edm::EDGetTokenT<TrackCollection> tracksToken_;  //used to select what tracks to read from configuration file
-};
 
-//
-// constants, enums and typedefs
-//
+    folderName_          = cfg.getUntrackedParameter<std::string>("folderName");
+    //recoPt_              = cfg.getParameter<double>("recoPtCut");
+    folder               = tfs_->mkdir(folderName_);
+    //folder->cd();
+    regionTree = folder.make<TTree>("EfficiencyTree", "Efficiency Tree");
+    regionTree->Branch("run",        &run,     "run/I");
+    regionTree->Branch("lumi",       &lumi,    "lumi/I");
+    regionTree->Branch("event",      &event,   "event/I");
+    regionTree->Branch("nvtx",       &nvtx,    "nvtx/D");
+    regionTree->Branch("vRegionEt",  &vRegionEt  );
+    regionTree->Branch("vRegionEta", &vRegionEta );
+    regionTree->Branch("vRegionPhi", &vRegionPhi );
+    regionTree->Branch("vRegionEG",  &vRegionEG  );
+    regionTree->Branch("vRegionTau", &vRegionTau );
 
-//
-// static data member definitions
-//
+    nEvents       = folder.make<TH1F>( "nEvents"  , "nEvents", 2,  0., 1. );
 
-//
-// constructors and destructor
-//
-Run3Ntuplizer::Run3Ntuplizer(const edm::ParameterSet& iConfig)
- :
-  tracksToken_(consumes<TrackCollection>(iConfig.getUntrackedParameter<edm::InputTag>("tracks")))
+    regionHitEta  = folder.make<TH1F>( "regionHit_eta"  , "eta", 16, 1, 16. );
+    regionHitPhi  = folder.make<TH1F>( "regionHit_phi"  , "phi", 16, 1, 16. );
+    regionTotal   = folder.make<TH1F>( "regionHit_total"  , "fullmap", 16, 1, 16. );
 
-{
-   //now do what ever initialization is needed
+    regionEta     = folder.make<TH1F>( "region_eta"  , "eta", 22, 1, 22. );
+    regionPhi     = folder.make<TH1F>( "region_phi"  , "phi", 72, 1, 72. );
+    regionPt      = folder.make<TH1F>( "region_pt"  , "pt", 100, 0, 100. );
+
+    regionEtaFine   = folder.make<TH1F>( "region_eta_Fine"  , "eta", 88, 1, 88. );
+    regionPhiFine   = folder.make<TH1F>( "region_phi_Fine"  , "phi", 72, 1, 72. );
+
+  }
+
+void Run3Ntuplizer::beginJob( const EventSetup & es) {
+   std::cout<<"begin job..."<<std::endl;
+}
+
+void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
+ {
+   std::cout<<"Analyzing..."<<std::endl;
+   nEvents->Fill(1);
+   
+   run = evt.id().run();
+   lumi = evt.id().luminosityBlock();
+   event = evt.id().event();
+   Handle<reco::VertexCollection> vertices;   
+   Handle<L1CaloRegionCollection> regions;
+   
+
+   edm::Handle<EcalTrigPrimDigiCollection> ecalTPGs;
+   edm::Handle<HcalTrigPrimDigiCollection> hcalTPGs;
+   
+   
+  if(!evt.getByToken(ecalSrc_, ecalTPGs))
+    std::cout<<"ERROR GETTING THE ECAL TPGS"<<std::endl;
+  if(!evt.getByToken(hcalSrc_, hcalTPGs))
+    std::cout<<"ERROR GETTING THE HCAL TPGS"<<std::endl;
+
+  ESHandle<L1CaloHcalScale> hcalScale;
+  es.get<L1CaloHcalScaleRcd>().get(hcalScale);
+
+  std::cout<<"making regions"<<std::endl;
+  vRegionEt.clear();
+  vRegionEta.clear();
+  vRegionPhi.clear();
+  vRegionTau.clear();
+  vRegionEG.clear();
+
+  UCTGeometry g;
+  //************* Get Regions and make region plots
+  if(!evt.getByToken(regionSource_,regions)){
+    std::cout<<"ERROR GETTING THE REGIONS!!!"<<std::endl;}
+  else{
+    for(vector<L1CaloRegion>::const_iterator testRegion = regions->begin(); testRegion != regions->end(); ++testRegion){
+      //UCTRegionProcess uctRegion(*region);
+       uint16_t test_raw = testRegion->raw();
+       uint32_t test_et = testRegion->et();
+       //testRegionTotET += test_et;
+       uint32_t test_rEta = testRegion->id().ieta();
+       uint32_t test_rPhi = testRegion->id().iphi();
+       UCTRegionIndex test_rIndex = g.getUCTRegionIndexFromL1CaloRegion(test_rEta, test_rPhi);
+       UCTTowerIndex test_tIndex = g.getUCTTowerIndexFromL1CaloRegion(test_rIndex, test_raw);
+       int test_cEta = test_tIndex.first;
+       int test_cPhi = test_tIndex.second;
+       bool test_negativeEta = g.getNegativeSide(test_cEta);
+       uint32_t test_crate = g.getCrate(test_cEta, test_cPhi);
+       uint32_t test_card = g.getCard(test_cEta, test_cPhi);
+       uint32_t test_region = g.getRegion(test_cEta, test_cPhi);
+       uint32_t test_iEta = g.getiEta(test_cEta);
+       uint32_t test_iPhi = g.getiPhi(test_cPhi);
+
+       if(testRegion->et()>0 && fabs(test_cEta)<28 && test_cPhi < 72){
+	 float pt = test_et;
+	 float eta = 0;
+	 if(fabs(test_cEta)<28){
+	   eta = towerEtaMap[(int)fabs(test_cEta)];
+	   eta = eta*fabs(test_cEta)/test_cEta;
+	 }
+
+	 float phi = towerPhiMap[test_cPhi];
+	 float isEgammaLike = 0;
+	 float isTauLike    = 0;
+	 if(!((l1tcalo::RegionEGVeto & testRegion->raw()) == l1tcalo::RegionEGVeto))
+	   isEgammaLike = 1;
+
+	 if(!((l1tcalo::RegionTauVeto & testRegion->raw()) == l1tcalo::RegionTauVeto))
+	   isTauLike = 1;
+	 //std::cout<<"region eta,phi: "<<eta<<" , "<<phi<<std::endl;
+	 vRegionEt.push_back(pt);
+	 vRegionEta.push_back(eta);
+	 vRegionPhi.push_back(phi);
+	 vRegionEG.push_back(isEgammaLike);
+	 vRegionEG.push_back(isTauLike);
+	 
+	 regionEta->Fill(eta);
+	 regionPhi->Fill(phi);
+	 regionPt->Fill(pt);
+	
+      }
+    }
+    regionTree->Fill();
+  }
+
 
 }
 
 
-Run3Ntuplizer::~Run3Ntuplizer()
-{
+  
+/*
+ * Get the ECAL TPGS create a TPG map for the event
+ *
+ */
+  
+void Run3Ntuplizer::initializeECALTPGMap(Handle<EcalTrigPrimDigiCollection> ecal, double eTowerETMap[73][57], bool testMode){
+  
+  //std::cout << "ECAL TPGS" << std::endl;
+  for (size_t i = 0; i < ecal->size(); ++i) {
+    int cal_ieta = (*ecal)[i].id().ieta();
+    int cal_iphi = (*ecal)[i].id().iphi();
+    int iphi = cal_iphi-1;
+    int ieta = TPGEtaRange(cal_ieta);
+    // TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
+    // TPG ieta ideal goes from 0-55.
+    double LSB = 0.5;
+    double et= (*ecal)[i].compressedEt()*LSB;
+    //if(et>0)std::cout<<"et "<< et<<std::endl;
+    if(testMode && iphi == 34 && ieta == 11){
+      et = 40;
+    }
 
-   // do anything here that needs to be done at desctruction time
-   // (e.g. close files, deallocate resources etc.)
+    //if(et>0)
+    //cout<<"Before filling eTower"
+    //<<"ECAL ieta:"<<ieta<<" cal_ieta:"<< cal_ieta<<" iphi:"<<iphi<<" et:"<<et<<endl;
+
+    if (iphi >= 0 && iphi <= 72 &&
+	ieta >= 0 && ieta <= 55) {
+      eTowerETMap[iphi][ieta] = et; 
+    }
+
+  }
 
 }
 
+ void Run3Ntuplizer::initializeHCALTPGMap(const Handle<HcalTrigPrimDigiCollection> hcal, 
+					 const ESHandle<L1CaloHcalScale>  hcalScale, 
+					 double hTowerETMap[73][57], bool testMode){
+  for (size_t i = 0; i < hcal->size(); ++i) {
+    HcalTriggerPrimitiveDigi tpg = (*hcal)[i];
+    int cal_ieta = tpg.id().ieta();
+    int cal_iphi = tpg.id().iphi();
+    int iphi = cal_iphi-1;
+    int ieta = TPGEtaRange(cal_ieta);
+    short absieta = std::abs(tpg.id().ieta());
+    short zside = tpg.id().zside();
+    double energy = hcalScale->et(tpg.SOI_compressedEt(), absieta, zside); 
+    //if(energy>0)std::cout<<"energy "<< energy<<std::endl;
 
-//
-// member functions
-//
+    if(testMode && iphi == 34 && ieta == 12){
+      energy = 40;
+    }
 
-// ------------ method called for each event  ------------
-void
-Run3Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
-   using namespace edm;
+    if (iphi >= 0 && iphi <= 71 &&
+	ieta >= 0 && ieta <= 55) {
 
-   for(const auto& track : iEvent.get(tracksToken_) ) {
-      // do something with track parameters, e.g, plot the charge.
-      // int charge = track.charge();
-   }
-
-#ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
-   ESHandle<SetupData> pSetup;
-   iSetup.get<SetupRecord>().get(pSetup);
-#endif
+      //(*hcal)[i].SOI_compressedEt(), absieta, zside)*LSB; //*LSB
+      //if(energy>0)
+      //std::cout<<"hcal iphi "<<iphi<<" ieta "<<ieta<<" energy "<<energy<<std::endl;
+      hTowerETMap[iphi][ieta] = energy;
+      //TPGSum_ +=energy;
+      //TPGH_ += energy;
+      //double alpha_h = TPGSFp_[cal_ieta]; //v3
+      //hCorrTowerETMap[cal_iphi][cal_ieta] = alpha_h*energy;
+      //cTPGH_ += alpha_h*energy;
+      //if (energy > 0) {
+      //std::cout << "hcal eta/phi=" << ieta << "/" << iphi
+      //<< " = (" << getEtaTPG(ieta) << "/" << getPhiTPG(iphi) << ") "
+      //<< " et=" << (*hcal)[i].SOI_compressedEt()
+      //<< " energy=" << energy
+      //<< " rctEta="<< twrEta2RegionEta(cal_ieta) << " rctPhi=" << twrPhi2RegionPhi(cal_iphi)
+      //<< " fg=" << (*hcal)[i].SOI_fineGrain() << std::endl;
+      //}
+      //if (energy>maxTPGHPt){
+      //maxTPGHPt=energy;
+      //maxTPGHPt_phi = cal_iphi; //this one starts at 0-72
+      //maxTPGHPt_eta = cal_ieta; //this one is 0-54
+      //} 
+    }
+    //else
+      //std::cout<<"HCAL failed checks iphi "<<iphi<<" ieta "<<ieta<<std::endl;
+  }//end HCAL TPG
 }
 
-
-// ------------ method called once each job just before starting event loop  ------------
-void
-Run3Ntuplizer::beginJob()
-{
+void Run3Ntuplizer::endJob() {
 }
 
-// ------------ method called once each job just after ending the event loop  ------------
-void
-Run3Ntuplizer::endJob()
-{
+Run3Ntuplizer::~Run3Ntuplizer(){
+
 }
 
-// ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
-void
-Run3Ntuplizer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-  //The following says we do not know what parameters are allowed so do no validation
-  // Please change this to state exactly what you do use, even if it is no parameters
-  edm::ParameterSetDescription desc;
-  desc.setUnknown();
-  descriptions.addDefault(desc);
-
-  //Specify that only 'tracks' is allowed
-  //To use, remove the default given above and uncomment below
-  //ParameterSetDescription desc;
-  //desc.addUntracked<edm::InputTag>("tracks","ctfWithMaterialTracks");
-  //descriptions.addDefault(desc);
-}
-
-//define this as a plug-in
 DEFINE_FWK_MODULE(Run3Ntuplizer);
