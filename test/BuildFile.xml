@@ -1,4 +1,3 @@
 <bin file="test_catch2_*.cc" name="testL1TriggerRun3NtuplizerTP">
   <use name="FWCore/TestProcessor"/>
-  <use name="catch2"/>
 </bin>
