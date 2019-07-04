@@ -27,17 +27,21 @@ using std::cout;
 using std::endl;
 using std::vector;
 
+bool compareByPtJets (l1extra::L1JetParticle i,l1extra::L1JetParticle j) { return(i.pt()>j.pt()); };
 
 Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
   ecalSrc_(consumes<EcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("ecalDigis"))),
   hcalSrc_(consumes<HcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("hcalDigis"))),
-  vtxLabel_(consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"))),
-  regionSource_(consumes<vector <L1CaloRegion> >(cfg.getParameter<edm::InputTag>("UCTRegion")))
+  jetSrc_(consumes<vector<pat::Jet> >(cfg.getParameter<edm::InputTag>("recoJets"))),
+  jetSrcAK8_(consumes<vector<pat::Jet> >(cfg.getParameter<edm::InputTag>("recoJetsAK8"))),
+  regionSource_(consumes<vector <L1CaloRegion> >(cfg.getParameter<edm::InputTag>("UCTRegion"))),
+  centralJets_(consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTCentralJets"))),
+  forwardJets_(consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTForwardJets")))
   {
 
 
     folderName_          = cfg.getUntrackedParameter<std::string>("folderName");
-    //recoPt_              = cfg.getParameter<double>("recoPtCut");
+    recoPt_              = cfg.getParameter<double>("recoPtCut");
     folder               = tfs_->mkdir(folderName_);
     //folder->cd();
     regionTree = folder.make<TTree>("EfficiencyTree", "Efficiency Tree");
@@ -64,6 +68,51 @@ Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
     regionEtaFine   = folder.make<TH1F>( "region_eta_Fine"  , "eta", 88, 1, 88. );
     regionPhiFine   = folder.make<TH1F>( "region_phi_Fine"  , "phi", 72, 1, 72. );
 
+    recoJet_pt   = folder.make<TH1F>( "recoJet_pt" , "p_{t}", 300,  0., 300. );
+    recoJet_eta  = folder.make<TH1F>( "recoJet_eta"  , "eta", 100,  -3, 3. );
+    recoJet_phi  = folder.make<TH1F>( "recoJet_phi"  , "phi", 100,  -4, 4. );
+
+    recoJetAK8_pt   = folder.make<TH1F>( "recoJetAK8_pt" , "p_{t}", 300,  0., 300. );
+    recoJetAK8_eta  = folder.make<TH1F>( "recoJetAK8_eta"  , "eta", 100,  -3, 3. );
+    recoJetAK8_phi  = folder.make<TH1F>( "recoJetAK8_phi"  , "phi", 100,  -4, 4. );
+
+    efficiencyTreeAK8 = folder.make<TTree>("EfficiencyTreeAK8", "Efficiency Tree AK8");
+    efficiencyTreeAK8->Branch("run",    &run,     "run/I");
+    efficiencyTreeAK8->Branch("lumi",   &lumi,    "lumi/I");
+    efficiencyTreeAK8->Branch("event",  &event,   "event/I");
+    efficiencyTreeAK8->Branch("nvtx",   &nvtx,     "nvtx/D");
+    
+    efficiencyTreeAK8->Branch("recoPt",    &recoPtAK8,   "recoPt/D");
+    
+    efficiencyTreeAK8->Branch("jetPt",     &jetPtAK8, "jetPt/D");
+
+    efficiencyTreeAK8->Branch("recoEta",    &recoEtaAK8,   "recoEta/D");
+    efficiencyTreeAK8->Branch("jetEta",     &jetEtaAK8, "jetEta/D");
+    
+    efficiencyTreeAK8->Branch("recoPhi",    &recoPhiAK8,   "recoPhi/D");
+    efficiencyTreeAK8->Branch("jetPhi",     &jetPhiAK8, "jetPhi/D");
+
+    efficiencyTreeAK8->Branch("l1Matched",  &l1MatchedAK8, "l1Matched/I");
+
+    efficiencyTree = folder.make<TTree>("EfficiencyTree", "Efficiency Tree ");
+    efficiencyTree->Branch("run",     &run,     "run/I");
+    efficiencyTree->Branch("lumi",    &lumi,     "lumi/I");
+    efficiencyTree->Branch("event",   &event,    "event/I");
+    efficiencyTree->Branch("nvtx",    &nvtx,     "nvtx/D");
+    
+    efficiencyTree->Branch("recoPt",  &recoPt,   "recoJetPt/D");
+    
+    efficiencyTree->Branch("jetPt",   &jetPt,    "l1JetPt/D"); 
+
+    efficiencyTree->Branch("recoEta", &recoEta,  "recoJetEta/D");
+    efficiencyTree->Branch("jetEta",  &jetEta,   "l1JetEta/D");
+    
+    efficiencyTree->Branch("recoPhi", &recoPhi,   "recoJetPhi/D");
+    efficiencyTree->Branch("jetPhi",  &jetPhi,    "l1JetPhi/D");
+
+    efficiencyTree->Branch("l1Matched",  &l1Matched, "l1Matched/I");
+
+
   }
 
 void Run3Ntuplizer::beginJob( const EventSetup & es) {
@@ -78,9 +127,13 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
    run = evt.id().run();
    lumi = evt.id().luminosityBlock();
    event = evt.id().event();
-   Handle<reco::VertexCollection> vertices;   
    Handle<L1CaloRegionCollection> regions;
    
+   std::vector<pat::Jet> goodJets;
+   std::vector<pat::Jet> goodJetsAK8;
+  
+   edm::Handle < vector<l1extra::L1JetParticle> > l1CentralJets;
+   edm::Handle < vector<l1extra::L1JetParticle> > l1ForwardJets;
 
    edm::Handle<EcalTrigPrimDigiCollection> ecalTPGs;
    edm::Handle<HcalTrigPrimDigiCollection> hcalTPGs;
@@ -91,8 +144,90 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   if(!evt.getByToken(hcalSrc_, hcalTPGs))
     std::cout<<"ERROR GETTING THE HCAL TPGS"<<std::endl;
 
+  if(!evt.getByToken(centralJets_, l1CentralJets))
+    std::cout<<"ERROR GETTING THE CENTRAL JETS"<<std::endl;
+
+  if(!evt.getByToken(forwardJets_, l1ForwardJets))
+    std::cout<<"ERROR GETTING THE FORWARD JETS"<<std::endl;
+
+  //sort the L1 jets
+  vector<l1extra::L1JetParticle> l1JetsSorted;
+  vector<l1extra::L1JetParticle> l1JetsSortedEtaRestricted2p4;
+  for( vector<l1extra::L1JetParticle>::const_iterator l1Jet = l1CentralJets->begin(); l1Jet != l1CentralJets->end(); l1Jet++ ){
+    l1JetsSorted.push_back(*l1Jet);
+    if(abs(l1Jet->eta()) < 2.4) l1JetsSortedEtaRestricted2p4.push_back(*l1Jet);
+  }
+
+  for( vector<l1extra::L1JetParticle>::const_iterator l1Jet = l1ForwardJets->begin(); l1Jet != l1ForwardJets->end(); l1Jet++ ){
+    l1JetsSorted.push_back(*l1Jet);
+    if(abs(l1Jet->eta()) < 2.4) l1JetsSortedEtaRestricted2p4.push_back(*l1Jet);
+  }
+
+  std::sort(l1JetsSorted.begin(),l1JetsSorted.end(),compareByPtJets);
+  std::sort(l1JetsSortedEtaRestricted2p4.begin(),l1JetsSortedEtaRestricted2p4.end(),compareByPtJets);
+
   ESHandle<L1CaloHcalScale> hcalScale;
   es.get<L1CaloHcalScaleRcd>().get(hcalScale);
+
+  Handle<vector<pat::Jet> > jets;
+  if(evt.getByToken(jetSrc_, jets)){//Begin Getting Reco Taus
+    for (const pat::Jet &jet : *jets) {
+      recoJet_pt->Fill( jet.pt() );
+      recoJet_eta->Fill( jet.eta() );
+      recoJet_phi->Fill( jet.phi() );
+      //get rid of the low pt stuff for analysis to save disk space
+      if(jet.pt() > recoPt_ ) {
+	goodJets.push_back(jet);
+
+      }
+    }
+  }
+  else
+    std::cout<<"Error getting reco jets"<<std::endl;
+
+  Handle<vector<pat::Jet> > jetsAK8;
+  
+  if(evt.getByToken(jetSrcAK8_, jetsAK8)){//Begin Getting Reco Jets
+    for (const pat::Jet &jetAK8 : *jetsAK8) {
+      recoJetAK8_pt->Fill( jetAK8.pt() );
+      recoJetAK8_eta->Fill( jetAK8.eta() );
+      recoJetAK8_phi->Fill( jetAK8.phi() );
+      //get rid of the cruft for analysis to save disk space
+      if(jetAK8.pt() > recoPt_ ) {
+	goodJetsAK8.push_back(jetAK8);
+
+      }
+    }
+  }
+  else
+    std::cout<<"Error getting AK8 jets"<<std::endl;
+
+
+  //fill the jet variables here!
+  //include delta eta between the two jets,
+  // pt, eta, phi of each jet
+  //delta phi between two jets
+  //invariant mass of two jets
+  //total number of jets in the event
+  for(auto jet : goodJets){
+    recoPt =  jet.pt();
+    recoEta =  jet.eta();
+    recoPhi =  jet.phi();
+    jetPt = -99;
+    jetEta = -99;
+    jetPhi = -99;
+    for(auto l1jet : l1JetsSorted){
+      if(reco::deltaR(jet.eta(), jet.phi(), l1jet.eta(), l1jet.phi()< 0.2)){
+	//now fill the tree!
+	jetPt = l1jet.pt();
+	jetEta = l1jet.eta();
+	jetPhi = l1jet.phi();	
+      }
+    }
+
+    efficiencyTree->Fill();
+  }
+  
 
   std::cout<<"making regions"<<std::endl;
   vRegionEt.clear();
@@ -118,11 +253,11 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
        int test_cEta = test_tIndex.first;
        int test_cPhi = test_tIndex.second;
        bool test_negativeEta = g.getNegativeSide(test_cEta);
-       uint32_t test_crate = g.getCrate(test_cEta, test_cPhi);
-       uint32_t test_card = g.getCard(test_cEta, test_cPhi);
-       uint32_t test_region = g.getRegion(test_cEta, test_cPhi);
-       uint32_t test_iEta = g.getiEta(test_cEta);
-       uint32_t test_iPhi = g.getiPhi(test_cPhi);
+       //uint32_t test_crate = g.getCrate(test_cEta, test_cPhi);
+       //uint32_t test_card = g.getCard(test_cEta, test_cPhi);
+       //uint32_t test_region = g.getRegion(test_cEta, test_cPhi);
+       //uint32_t test_iEta = g.getiEta(test_cEta);
+       //uint32_t test_iPhi = g.getiPhi(test_cPhi);
 
        if(testRegion->et()>0 && fabs(test_cEta)<28 && test_cPhi < 72){
 	 float pt = test_et;

@@ -30,7 +30,6 @@ using std::vector;
 L1TRegionNtupleProducer::L1TRegionNtupleProducer( const ParameterSet & cfg ) :
   ecalSrc_(consumes<EcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("ecalDigis"))),
   hcalSrc_(consumes<HcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("hcalDigis"))),
-  vtxLabel_(consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"))),
   regionSource_(consumes<vector <L1CaloRegion> >(cfg.getParameter<edm::InputTag>("UCTRegion")))
   {
 
@@ -77,7 +76,6 @@ void L1TRegionNtupleProducer::analyze( const Event& evt, const EventSetup& es )
    run = evt.id().run();
    lumi = evt.id().luminosityBlock();
    event = evt.id().event();
-   Handle<reco::VertexCollection> vertices;   
    Handle<L1CaloRegionCollection> regions;
    
 

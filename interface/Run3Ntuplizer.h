@@ -21,6 +21,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "DataFormats/PatCandidates/interface/Jet.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
@@ -102,6 +103,17 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   TTree* regionTree;
   TFileDirectory folder;
 
+  TH1F* recoJet_pt;
+  TH1F* recoJet_eta;
+  TH1F* recoJet_phi;
+
+  TH1F* recoJetAK8_pt;
+  TH1F* recoJetAK8_eta;
+  TH1F* recoJetAK8_phi;
+
+  TTree* efficiencyTree;
+  TTree* efficiencyTreeAK8;
+
   int run, lumi, event;
   float nvtx;
   void initializeHCALTPGMap(const edm::Handle<HcalTrigPrimDigiCollection> hcal, const  edm::ESHandle<L1CaloHcalScale> hcalScale, double hTowerETMap[73][57], bool testMode = false);
@@ -134,23 +146,23 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   edm::EDGetTokenT<HcalTrigPrimDigiCollection> hcalSrc_;
   //edm::EDGetTokenT<double> recoPt_;
   //edm::EDGetTokenT<std::string> folderName_;
-  edm::EDGetTokenT<reco::VertexCollection> vtxLabel_;
-  edm::EDGetTokenT<reco::PFTauDiscriminator> discriminatorMu_;
-  edm::EDGetTokenT<reco::PFTauDiscriminator> discriminatorIso_;
+  edm::EDGetTokenT<vector<pat::Jet> > jetSrc_;
+  edm::EDGetTokenT<vector<pat::Jet> > jetSrcAK8_;
   edm::EDGetTokenT<vector<pat::Tau> > tauSrc_;
-  //edm::EDGetTokenT<L1GctJetCandCollection> gctIsoTauJetsSource_;
-  //edm::EDGetTokenT<L1GctJetCandCollection> gctTauJetsSource_;
-  edm::EDGetTokenT<vector <l1extra::L1JetParticle> > l1ExtraIsoTauSource_;
-  edm::EDGetTokenT<vector <l1extra::L1JetParticle> > l1ExtraTauSource_;
-  edm::EDGetTokenT<BXVector <l1t::Tau> > l1Stage2TauSource_;
-  edm::EDGetTokenT<BXVector <l1t::Tau> > l1Stage1TauSource_;
-  edm::EDGetTokenT<BXVector <l1t::Tau> > l1Stage1IsoTauSource_;
-  edm::EDGetTokenT<vector <L1GctJetCand> > l1GctTauSource_;
   edm::EDGetTokenT<vector <L1CaloRegion> > regionSource_;
+  edm::EDGetTokenT<vector <l1extra::L1JetParticle> > centralJets_;
+  edm::EDGetTokenT<vector <l1extra::L1JetParticle> > forwardJets_;
 
   std::string folderName_;
-  double recoPt_;
 
+  double jetPt, jetEta, jetPhi;
+  double recoPt, recoEta, recoPhi;
+
+  double jetPtAK8, jetEtaAK8, jetPhiAK8;
+  double recoPtAK8, recoEtaAK8, recoPhiAK8;
+  double recoPt_;
+  int l1Matched;
+  int l1MatchedAK8;
 		 
  int TPGEtaRange(int ieta){
    int iEta = 0;
