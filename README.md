@@ -11,4 +11,12 @@ git clone git@github.com:isobelojalvo/L1TCaloSummary.git
 git clone --branch jul4 git@github.com:isobelojalvo/Run3Ntuplizer.git
 cd ..
 scram b -j 8
+
+cd L1Trigger/Run3Ntuplizer/test
+
+## to run zero bias data
+cmsRun testL1TCaloSummary-ZeroBias.py
+
+## to run VBF Htt events
+cmsRun testL1TCaloSummary-VBF.py
 ```
