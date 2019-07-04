@@ -11,4 +11,6 @@ git clone git@github.com:isobelojalvo/L1TCaloSummary.git
 git clone git@github.com:isobelojalvo/Run3Ntuplizer.git
 cd ..
 scram b -j 8
+cd L1Trigger/Run3Ntuplizer/test
+cmsRun testL1TCaloSummary.py
 ```
