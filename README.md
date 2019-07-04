@@ -8,7 +8,7 @@ git cms-init
 git cms-merge-topic isobelojalvo:run3-dev-$CMSSW_VERSION
 cd L1Trigger
 git clone git@github.com:isobelojalvo/L1TCaloSummary.git
-git clone git@github.com:isobelojalvo/Run3Ntuplizer.git
+git clone --branch jul4 git@github.com:isobelojalvo/Run3Ntuplizer.git
 cd ..
 scram b -j 8
 ```
