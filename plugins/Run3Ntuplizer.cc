@@ -36,7 +36,8 @@ Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
   jetSrcAK8_(consumes<vector<pat::Jet> >(cfg.getParameter<edm::InputTag>("recoJetsAK8"))),
   regionSource_(consumes<vector <L1CaloRegion> >(cfg.getParameter<edm::InputTag>("UCTRegion"))),
   centralJets_(consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTCentralJets"))),
-  forwardJets_(consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTForwardJets")))
+  forwardJets_(consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTForwardJets"))),
+  genJets_(consumes<vector <reco::GenJet> >(cfg.getParameter<edm::InputTag>("genJets")))
   {
 
 
@@ -94,23 +95,64 @@ Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
 
     efficiencyTreeAK8->Branch("l1Matched",  &l1MatchedAK8, "l1Matched/I");
 
-    efficiencyTree = folder.make<TTree>("EfficiencyTree", "Efficiency Tree ");
+    efficiencyTree = folder.make<TTree>("genJetTree", "gen Matched Jet Tree ");
     efficiencyTree->Branch("run",     &run,     "run/I");
     efficiencyTree->Branch("lumi",    &lumi,     "lumi/I");
     efficiencyTree->Branch("event",   &event,    "event/I");
     efficiencyTree->Branch("nvtx",    &nvtx,     "nvtx/D");
-    
-    efficiencyTree->Branch("recoPt",  &recoPt,   "recoJetPt/D");
-    
-    efficiencyTree->Branch("jetPt",   &jetPt,    "l1JetPt/D"); 
 
-    efficiencyTree->Branch("recoEta", &recoEta,  "recoJetEta/D");
-    efficiencyTree->Branch("jetEta",  &jetEta,   "l1JetEta/D");
-    
-    efficiencyTree->Branch("recoPhi", &recoPhi,   "recoJetPhi/D");
-    efficiencyTree->Branch("jetPhi",  &jetPhi,    "l1JetPhi/D");
+    efficiencyTree->Branch("genPt_1",  &genPt_1,   "genPt_1/D");
+    efficiencyTree->Branch("genEta_1", &genEta_1,  "genEta_1/D");
+    efficiencyTree->Branch("genPhi_1", &genPhi_1,  "genPhi_1/D");
 
-    efficiencyTree->Branch("l1Matched",  &l1Matched, "l1Matched/I");
+    efficiencyTree->Branch("genPt_2",  &genPt_2,   "genPt_2/D");
+    efficiencyTree->Branch("genEta_2", &genEta_2,  "genEta_2/D");
+    efficiencyTree->Branch("genPhi_2", &genPhi_2,  "genPhi_2/D");
+
+    efficiencyTree->Branch("genDeltaEta",   &genDeltaEta,   "genDeltaEta/D");
+    efficiencyTree->Branch("genDeltaPhi",   &genDeltaPhi,   "genDeltaPhi/D");
+    efficiencyTree->Branch("genDeltaR",     &genDeltaR,     "genDeltaR/D");
+    efficiencyTree->Branch("genMass",       &genMass,       "genMass/D");
+    
+    efficiencyTree->Branch("recoPt_1",      &recoPt_1,     "recoPt_1/D");
+    efficiencyTree->Branch("recoEta_1",     &recoEta_1,    "recoEta_1/D");
+    efficiencyTree->Branch("recoPhi_1",     &recoPhi_1,    "recoPhi_1/D");
+    efficiencyTree->Branch("recoNthJet_1",  &recoNthJet_1, "recoNthJet_1/I");
+
+    efficiencyTree->Branch("recoPt_2",      &recoPt_2,      "recoPt_2/D");
+    efficiencyTree->Branch("recoEta_2",     &recoEta_2,     "recoEta_2/D");
+    efficiencyTree->Branch("recoPhi_2",     &recoPhi_2,     "recoPhi_2/D");
+    efficiencyTree->Branch("recoNthJet_2",  &recoNthJet_2,  "recoNthJet_2/I");
+
+    efficiencyTree->Branch("recoDeltaEta",  &recoDeltaEta, "recoDeltaEta/D");
+    efficiencyTree->Branch("recoDeltaPhi",  &recoDeltaPhi, "recoDeltaPhi/D");
+    efficiencyTree->Branch("recoDeltaR",    &recoDeltaR,   "recoDeltaR/D");
+    efficiencyTree->Branch("recoMass",      &recoMass,     "recoMass/D");
+      
+    efficiencyTree->Branch("l1Pt_1",        &l1Pt_1,       "l1Pt_1/D"); 
+    efficiencyTree->Branch("l1Eta_1",       &l1Eta_1,      "l1Eta_1/D");
+    efficiencyTree->Branch("l1Phi_1",       &l1Phi_1,      "l1Phi_1/D");
+    efficiencyTree->Branch("l1NthJet_1",    &l1NthJet_1,   "l1NthJet_1/I");
+
+    efficiencyTree->Branch("l1Pt_2",        &l1Pt_2,       "l1Pt_2/D"); 
+    efficiencyTree->Branch("l1Eta_2",       &l1Eta_2,      "l1Eta_2/D");
+    efficiencyTree->Branch("l1Phi_2",       &l1Phi_2,      "l1Phi_2/D");
+    efficiencyTree->Branch("l1NthJet_2",    &l1NthJet_2,   "l1NthJet_2/I");
+
+    efficiencyTree->Branch("l1DeltaEta",    &l1DeltaEta,   "l1DeltaEta/D");
+    efficiencyTree->Branch("l1DeltaPhi",    &l1DeltaPhi,   "l1DeltaPhi/D");
+    efficiencyTree->Branch("l1DeltaR",      &l1DeltaR,     "l1DeltaR/D");
+    efficiencyTree->Branch("l1Mass",        &l1Mass,       "l1Mass/D");
+
+    efficiencyTree->Branch("l1Matched_1",   &l1Matched_1, "l1Matched_1/I");
+    efficiencyTree->Branch("l1Matched_2",   &l1Matched_2, "l1Matched_2/I");
+
+    efficiencyTree->Branch("genMatched_1",  &genMatched_1, "genMatched_1/I");
+    efficiencyTree->Branch("genMatched_2",  &genMatched_2, "genMatched_2/I");
+
+    efficiencyTree->Branch("nGenJets",      &nGenJets,     "nGenJets/I");
+    efficiencyTree->Branch("nRecoJets",     &nRecoJets,    "nRecoJets/I");
+    efficiencyTree->Branch("nL1Jets",       &nL1Jets,      "nL1Jets/I");
 
 
   }
@@ -135,6 +177,8 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
    edm::Handle < vector<l1extra::L1JetParticle> > l1CentralJets;
    edm::Handle < vector<l1extra::L1JetParticle> > l1ForwardJets;
 
+   edm::Handle < vector<reco::GenJet> > genJets;
+   
    edm::Handle<EcalTrigPrimDigiCollection> ecalTPGs;
    edm::Handle<HcalTrigPrimDigiCollection> hcalTPGs;
    
@@ -149,6 +193,9 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
 
   if(!evt.getByToken(forwardJets_, l1ForwardJets))
     std::cout<<"ERROR GETTING THE FORWARD JETS"<<std::endl;
+
+  if(!evt.getByToken(genJets_, genJets))
+    std::cout<<"ERROR GETTING THE GEN JETS"<<std::endl;
 
   //sort the L1 jets
   vector<l1extra::L1JetParticle> l1JetsSorted;
@@ -202,6 +249,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   else
     std::cout<<"Error getting AK8 jets"<<std::endl;
 
+  zeroOutAllVariables();
 
   //fill the jet variables here!
   //include delta eta between the two jets,
@@ -209,25 +257,89 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   //delta phi between two jets
   //invariant mass of two jets
   //total number of jets in the event
-  for(auto jet : goodJets){
-    recoPt =  jet.pt();
-    recoEta =  jet.eta();
-    recoPhi =  jet.phi();
-    jetPt = -99;
-    jetEta = -99;
-    jetPhi = -99;
-    for(auto l1jet : l1JetsSorted){
-      if(reco::deltaR(jet.eta(), jet.phi(), l1jet.eta(), l1jet.phi()< 0.2)){
-	//now fill the tree!
-	jetPt = l1jet.pt();
-	jetEta = l1jet.eta();
-	jetPhi = l1jet.phi();	
+  reco::GenJet genJet_1;
+  reco::GenJet genJet_2;
+  if(genJets->size()>0){
+    genPt_1  = genJets->at(0).pt();
+    genEta_1 = genJets->at(0).eta();
+    genPhi_1 = genJets->at(0).phi();
+    genJet_1 = genJets->at(0);
+
+    if(genJets->size()>1){
+      genPt_2  = genJets->at(1).pt();
+      genEta_2 = genJets->at(1).eta();
+      genPhi_2 = genJets->at(1).phi();
+      genJet_2 = genJets->at(1);
+
+      genDeltaEta = genEta_1 - genEta_2;
+      genDeltaPhi = genPhi_1 - genPhi_2;
+      genDeltaR = reco::deltaR(genJet_1,genJet_2 );
+      genMass = (genJet_1.p4() + genJet_2.p4()).mass();
+
+    }
+    
+    int i = 0;
+    int foundRecoJet_1 = 0;
+    int foundRecoJet_2 = 0;
+    for(auto jet : goodJets){
+      if(reco::deltaR(jet, genJet_1)<0.1 && foundRecoJet_1 == 0 ){
+	recoPt_1  = jet.pt();
+	recoEta_1 = jet.eta();
+	recoPhi_1 = jet.phi();
+	recoNthJet_1 = i;
+	foundRecoJet_1 = 1;
       }
+      if(genPt_2 > 0 && reco::deltaR(jet, genJet_2)<0.1 && foundRecoJet_2 == 0 ){
+	recoPt_2  = jet.pt();
+	recoEta_2 = jet.eta();
+	recoPhi_2 = jet.phi();
+	recoNthJet_2 = i;
+	foundRecoJet_2 = 1; 
+      }
+      i++;
     }
 
+    if(foundRecoJet_1>0 && foundRecoJet_2>0){
+      recoDeltaEta = recoEta_1 - recoEta_2;
+      recoDeltaPhi = recoPhi_1 - recoPhi_2;
+      recoDeltaR = reco::deltaR(goodJets.at(recoNthJet_1), goodJets.at(recoNthJet_2) );
+      recoMass = (goodJets.at(recoNthJet_1).p4() + goodJets.at(recoNthJet_2).p4()).mass();
+    }
+
+
+    i = 0;
+    int foundL1Jet_1 = 0;
+    int foundL1Jet_2 = 0;
+    for(auto jet : l1JetsSorted){
+      if(reco::deltaR(jet, genJet_1)<0.1 && foundL1Jet_1 == 0 ){
+	l1Pt_1  = jet.pt();
+	l1Eta_1 = jet.eta();
+	l1Phi_1 = jet.phi();
+	l1NthJet_1 = i;
+	foundL1Jet_1 = 1;
+      }
+      if(genPt_2 > 0 && reco::deltaR(jet, genJet_2)<0.1 && foundL1Jet_2 == 0 ){
+	l1Pt_2  = jet.pt();
+	l1Eta_2 = jet.eta();
+	l1Phi_2 = jet.phi();
+	l1NthJet_2 = i;
+	foundL1Jet_2 = 1;
+      }
+      i++;
+    }
+
+    if(foundL1Jet_1>0 && foundL1Jet_2>0){
+      l1DeltaEta = l1Eta_1 - l1Eta_2;
+      l1DeltaPhi = l1Phi_1 - l1Phi_2;
+      l1DeltaR = reco::deltaR(goodJets.at(l1NthJet_1), goodJets.at(l1NthJet_2) );
+      l1Mass = (goodJets.at(l1NthJet_1).p4() + goodJets.at(l1NthJet_2).p4()).mass();
+    }
+    
+    nGenJets = genJets->size();
+    nRecoJets = goodJets.size();
+    nL1Jets = l1JetsSorted.size();
     efficiencyTree->Fill();
   }
-  
 
   std::cout<<"making regions"<<std::endl;
   vRegionEt.clear();
@@ -331,7 +443,23 @@ void Run3Ntuplizer::initializeECALTPGMap(Handle<EcalTrigPrimDigiCollection> ecal
 
 }
 
- void Run3Ntuplizer::initializeHCALTPGMap(const Handle<HcalTrigPrimDigiCollection> hcal, 
+void Run3Ntuplizer::zeroOutAllVariables(){
+  genDeltaEta=-99;   genDeltaPhi=-99;   genDeltaR=-99; genMass=-99;
+  recoPt_1=-99;  recoEta_1=-99;    recoPhi_1=-99;    recoNthJet_1=-99;    
+  recoPt_2=-99;     recoEta_2=-99;    recoPhi_2=-99;    recoNthJet_2=-99;    
+  recoDeltaEta=-99;    recoDeltaPhi=-99;      recoDeltaR=-99;   recoMass=-99;   
+  l1Pt_1=-99;       l1Eta_1=-99;      l1Phi_1=-99;      l1NthJet_1=-99; 
+  l1Pt_2=-99;       l1Eta_2=-99;      l1Phi_2=-99;      l1NthJet_2=-99; 
+  l1DeltaEta=-99;   l1DeltaPhi=-99;   l1DeltaR=-99;     l1Mass=-99;     
+  l1Matched_1=-99;   l1Matched_2=-99;               
+  genMatched_1=-99;      genMatched_2=-99;    
+  nGenJets=-99;   
+  nRecoJets=-99;  
+  nL1Jets=-99;    
+
+};
+
+void Run3Ntuplizer::initializeHCALTPGMap(const Handle<HcalTrigPrimDigiCollection> hcal, 
 					 const ESHandle<L1CaloHcalScale>  hcalScale, 
 					 double hTowerETMap[73][57], bool testMode){
   for (size_t i = 0; i < hcal->size(); ++i) {

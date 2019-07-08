@@ -118,9 +118,9 @@ process.TFileService = cms.Service(
 
 process.p = cms.Path(process.l1tCaloLayer1Digis*process.uct2016EmulatorDigis*process.l1NtupleProducer)
 
-process.e = cms.EndPath(process.out)
+#process.e = cms.EndPath(process.out)
 
-process.schedule = cms.Schedule(process.p,process.e)
+process.schedule = cms.Schedule(process.p)
 
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)

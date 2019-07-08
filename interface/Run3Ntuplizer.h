@@ -118,6 +118,7 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   float nvtx;
   void initializeHCALTPGMap(const edm::Handle<HcalTrigPrimDigiCollection> hcal, const  edm::ESHandle<L1CaloHcalScale> hcalScale, double hTowerETMap[73][57], bool testMode = false);
   void initializeECALTPGMap(edm::Handle<EcalTrigPrimDigiCollection> ecal, double eTowerETMap[73][57], bool testMode = false);
+  void zeroOutAllVariables();
 
  protected:
   // Analyze
@@ -152,16 +153,37 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   edm::EDGetTokenT<vector <L1CaloRegion> > regionSource_;
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > centralJets_;
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > forwardJets_;
+  edm::EDGetTokenT<vector <reco::GenJet> > genJets_;
 
   std::string folderName_;
 
   double jetPt, jetEta, jetPhi;
   double recoPt, recoEta, recoPhi;
-
   double jetPtAK8, jetEtaAK8, jetPhiAK8;
   double recoPtAK8, recoEtaAK8, recoPhiAK8;
+
+  double genPt_1, genEta_1, genPhi_1;
+  double recoPt_1, recoEta_1, recoPhi_1;
+  double l1Pt_1, l1Eta_1, l1Phi_1;
+  
+  double genPt_2, genEta_2, genPhi_2;
+  double recoPt_2, recoEta_2, recoPhi_2;
+  double l1Pt_2, l1Eta_2, l1Phi_2;
+
+  int l1Matched_1, l1Matched_2;
+  int genMatched_1, genMatched_2;
+
+  double genDeltaEta, genDeltaPhi, genDeltaR, genMass;
+  double recoDeltaEta, recoDeltaPhi, recoDeltaR, recoMass;
+  double l1DeltaEta, l1DeltaPhi, l1DeltaR, l1Mass;
+
+  int nGenJets, nRecoJets, nL1Jets;
+
+  int l1NthJet_1, l1NthJet_2;
+  int recoNthJet_1, recoNthJet_2;
+
   double recoPt_;
-  int l1Matched;
+
   int l1MatchedAK8;
 		 
  int TPGEtaRange(int ieta){
