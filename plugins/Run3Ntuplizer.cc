@@ -346,8 +346,8 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
       if(foundL1Jet_1>0 && foundL1Jet_2>0){
 	l1DeltaEta = l1Eta_1 - l1Eta_2;
 	l1DeltaPhi = l1Phi_1 - l1Phi_2;
-	l1DeltaR = reco::deltaR(goodJets.at(l1NthJet_1), goodJets.at(l1NthJet_2) );
-	l1Mass = (goodJets.at(l1NthJet_1).p4() + goodJets.at(l1NthJet_2).p4()).mass();
+	l1DeltaR = reco::deltaR(l1JetsSorted.at(l1NthJet_1), l1JetsSorted.at(l1NthJet_2) );
+	l1Mass = (l1JetsSorted.at(l1NthJet_1).p4() + l1JetsSorted.at(l1NthJet_2).p4()).mass();
       }
       
       nGenJets = genJets->size();
@@ -381,14 +381,17 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
       recoPhi_2 = goodJets.at(1).phi();
       recoDeltaEta = recoEta_1 - recoEta_2;
       recoDeltaPhi = recoPhi_1 - recoPhi_2;
-      recoDeltaR = reco::deltaR(goodJets.at(0), goodJets.at(1) );
-      recoMass = (goodJets.at(recoNthJet_1).p4() + goodJets.at(recoNthJet_2).p4()).mass();
+      recoDeltaR = reco::deltaR(recoJet_1.p4(), recoJet_1.p4() );
+      recoMass = (recoJet_1.p4() + recoJet_2.p4()).mass();
     }
     int i = 0;
     int foundL1Jet_1 = 0;
     int foundL1Jet_2 = 0;
+    l1extra::L1JetParticle l1Jet_1;
+    l1extra::L1JetParticle l1Jet_2;
     for(auto jet : l1JetsSorted){
       if(reco::deltaR(jet, recoJet_1)<0.1 && foundL1Jet_1 == 0 ){
+	l1Jet_1 = jet;
 	l1Pt_1  = jet.pt();
 	l1Eta_1 = jet.eta();
 	l1Phi_1 = jet.phi();
@@ -396,6 +399,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
 	foundL1Jet_1 = 1;
       }
       if(genPt_2 > 0 && reco::deltaR(jet, recoJet_2)<0.1 && foundL1Jet_2 == 0 ){
+	l1Jet_2 = jet;
 	l1Pt_2  = jet.pt();
 	l1Eta_2 = jet.eta();
 	l1Phi_2 = jet.phi();
@@ -408,8 +412,8 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
     if(foundL1Jet_1>0 && foundL1Jet_2>0){
       l1DeltaEta = l1Eta_1 - l1Eta_2;
       l1DeltaPhi = l1Phi_1 - l1Phi_2;
-      l1DeltaR = reco::deltaR(recoJet_1, recoJet_2);
-      l1Mass = (recoJet_1.p4() + recoJet_2.p4()).mass();
+      l1DeltaR = reco::deltaR(l1Jet_1, l1Jet_2);
+      l1Mass = (l1Jet_1.p4() + l1Jet_2.p4()).mass();
     }
     
     nRecoJets = goodJets.size();
