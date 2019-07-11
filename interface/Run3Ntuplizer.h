@@ -111,6 +111,7 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   TH1F* recoJetAK8_eta;
   TH1F* recoJetAK8_phi;
 
+  TTree* genTree;
   TTree* efficiencyTree;
   TTree* efficiencyTreeAK8;
 
@@ -119,6 +120,8 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   void initializeHCALTPGMap(const edm::Handle<HcalTrigPrimDigiCollection> hcal, const  edm::ESHandle<L1CaloHcalScale> hcalScale, double hTowerETMap[73][57], bool testMode = false);
   void initializeECALTPGMap(edm::Handle<EcalTrigPrimDigiCollection> ecal, double eTowerETMap[73][57], bool testMode = false);
   void zeroOutAllVariables();
+  void createBranches(TTree *tree);
+  void createBranchesGen(TTree *tree);
 
  protected:
   // Analyze
@@ -183,9 +186,11 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   int recoNthJet_1, recoNthJet_2;
 
   double recoPt_;
-
+  bool isData_;
   int l1MatchedAK8;
-		 
+
+
+	 
  int TPGEtaRange(int ieta){
    int iEta = 0;
    // So here, -28 becomes 0.  -1 be comes 27.  +1 becomes 28. +28 becomes 55.
