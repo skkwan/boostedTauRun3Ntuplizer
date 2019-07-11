@@ -61,7 +61,8 @@ process.load('EventFilter.L1TXRawToDigi.caloLayer1Stage2Digis_cfi')
 process.load('L1Trigger.L1TCaloSummary.uct2016EmulatorDigis_cfi')
 
 process.load("L1Trigger.Run3Ntuplizer.l1TRun3Ntuplizer_cfi")
-l1NtupleProducer.isData = cms.bool(False)
+
+process.l1NtupleProducer.isData = cms.bool(False)
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)
@@ -79,11 +80,17 @@ process.source = cms.Source("PoolSource",
                             fileNames = cms.untracked.vstring('/store/mc/RunIIAutumn18MiniAOD/VBFHToTauTau_M125_13TeV_powheg_pythia8/MINIAODSIM/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/ABCCF610-63D3-7046-AA37-4D8B3F1D3494.root'
 ),
                             secondaryFileNames = cms.untracked.vstring(
-                                '/store/mc/RunIIAutumn18DR/VBFHToTauTau_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/018EB922-D39E-C045-B7B9-F07C91216849.root'
-                                                                   )
+                                '/store/mc/RunIIAutumn18DR/VBFHToTauTau_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/018EB922-D39E-C045-B7B9-F07C91216849.root',
+                                '/store/mc/RunIIAutumn18DR/VBFHToTauTau_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/018EB922-D39E-C045-B7B9-F07C91216849.root',
+                                '/store/mc/RunIIAutumn18DR/VBFHToTauTau_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/3FFEF5C8-A16B-CB46-98A9-49B8674E96E7.root',
+                                '/store/mc/RunIIAutumn18DR/VBFHToTauTau_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/90091689-95C4-E44A-B681-2AFCE2F2F0DB.root',
+                                '/store/mc/RunIIAutumn18DR/VBFHToTauTau_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/BC74B35D-B1CB-214B-9114-ECFA365539B9.root',
+                                '/store/mc/RunIIAutumn18DR/VBFHToTauTau_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/60000/F25C6600-C8C9-BB46-8E33-7F755B79A93B.root'
+                            )
 )
 
-process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:3375","1:1443","1:2960","1:3805")
+process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:3375","1:1443","1:2960","1:3805","1:3381","1:229","1:3531","1:583","1:1120","1:504","1:1454","1:874","1:1078","1:1087","1:121","1:1448","1:1456","1:177","1:2964")
+
 
 process.options = cms.untracked.PSet(
 
