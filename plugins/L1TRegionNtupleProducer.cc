@@ -27,6 +27,29 @@ using std::endl;
 using std::vector;
 
 
+
+struct cluster{
+  float pt;
+  float eta;
+  float phi;
+  
+  float topN_pt;
+  float topN_eta;
+  float topN_phi;
+  //....
+
+
+  //left neighbor
+  float leftN_pt;
+  float leftN_eta;
+  float leftN_phi;
+
+  float id;
+
+  //tells us if the centra seed for this cluster is the maximum in the region
+  float maxCluster;
+}
+
 // Tunable Distance Parameter
 const int R = 1;
 // Loop over all regions, no self-comparison, no duplicates
@@ -135,8 +158,13 @@ void L1TRegionNtupleProducer::analyze( const Event& evt, const EventSetup& es )
   vRegionTau.clear();
   vRegionEG.clear();
 
+  vector<cluster> clusters;
+
   UCTGeometry g;
   //************* Get Regions and make region plots
+
+
+  int i = 0;
   if(!evt.getByToken(regionSource_,regions)){
     std::cout<<"ERROR GETTING THE REGIONS!!!"<<std::endl;}
   else{
@@ -181,14 +209,47 @@ void L1TRegionNtupleProducer::analyze( const Event& evt, const EventSetup& es )
 	 vRegionEG.push_back(isEgammaLike);
 	 vRegionEG.push_back(isTauLike);
 	 
+
+	 // create cluster seeds
+	 cluster temp;
+	 temp.pt = pt;
+	 temp.eta = eta;
+	 temp.phi = phi;
+	 temp.id = i;
+	 temp.maxCluster = 1;
+
 	 regionEta->Fill(eta);
 	 regionPhi->Fill(phi);
 	 regionPt->Fill(pt);
-	
+
+	 cluster.push_back(temp);
+	 i++;
       }
     }
     regionTree->Fill();
   }
+  
+  //Each region is 0.087 x 4 in eta and 0.087 x 4 in phi
+  for(auto seed : clusters){
+    for(auto cluster_iter : clusters){
+      /// test different sizes for distance parameter in the future
+      if((fabs(seed.eta - cluster_iter.eta)< 0.087*4)&&fabs(seed.phi-cluster_iter.phi)<0.0874){
+	///this is a neighboring cluster
+	if((seed.eta - cluster_iter.eta) > 0){
+	  seed.leftN_pt = cluster_iter.pt;
+	  seed.leftN_pt = cluster_iter.eta;
+	  seed.leftN_pt = cluster_iter.phi;
+
+	  if(cluster_iter.pt > seed.pt)
+	    cluster_iter.maxCluster = 0;
+	}
+	// do this for all neighbors
+	
+      }
+    }
+  }
+  
+
 
 
 }
