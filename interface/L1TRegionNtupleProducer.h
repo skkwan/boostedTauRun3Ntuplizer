@@ -104,6 +104,7 @@ class L1TRegionNtupleProducer : public edm::EDAnalyzer {
 
   int run, lumi, event;
   float nvtx;
+  void antikt();
   void initializeHCALTPGMap(const edm::Handle<HcalTrigPrimDigiCollection> hcal, const  edm::ESHandle<L1CaloHcalScale> hcalScale, double hTowerETMap[73][57], bool testMode = false);
   void initializeECALTPGMap(edm::Handle<EcalTrigPrimDigiCollection> ecal, double eTowerETMap[73][57], bool testMode = false);
 

@@ -48,23 +48,13 @@ struct cluster{
 
   //tells us if the centra seed for this cluster is the maximum in the region
   float maxCluster;
-}
+};
 
 // Tunable Distance Parameter
 const int R = 1;
 // Loop over all regions, no self-comparison, no duplicates
-void antikt {
- for (int i=0, i++) {
-  for (int j=0, j!=i,j>i, j++) {
-// Region Distance Metric
-   float dist {
-    std::min(pow(vRegionEt[i],-2.0),pow(vRegionEt[j],-2.0))*sqrt(pow((vRegionEta[i]-vRegionEta[j]),2.0)+pow((vRegionPhi[i]-vRegionPhi[j]),2.0))/pow(R,2);
-   }
-// Beam Distance Metric
-   float bist {
-    std::min(pow(vRegionEt[i],-2.0),pow(vRegionEt[j],-2.0));
-   }
-   struct delta {
+void L1TRegionNtupleProducer::antikt(){
+  struct delta {
     float dist;
     float bist;
     float etai;
@@ -72,21 +62,30 @@ void antikt {
     float phii;
     float phij;
     bool cluster;
-   }
-// Set vector of parameters of each pair
-   std::vector<delta> Delta;
+  };
 
-   Delta[i].dist = dist;
-   Delta[i].bist = bist;
-   Delta[i].cluster = dist < bist;
-   Delta[i].etai = vRegionEta[i];
-   Delta[i].etaj = vRegionEta[j];
-   Delta[i].phii = vRegionPhi[i];
-   Delta[i].phij = vRegionPhi[j];
+  int max =100;
+    for (int i=0; i<max; i++) {
+      for (int j=0; j!=i && j>i; j++) {
+	// Region Distance Metric
+	float dist = std::min(pow(vRegionEt[i],-2.0),pow(vRegionEt[j],-2.0))*sqrt(pow((vRegionEta[i]-vRegionEta[j]),2.0)+pow((vRegionPhi[i]-vRegionPhi[j]),2.0))/pow(R,2);
+	// Beam Distance Metric
+	float bist = std::min(pow(vRegionEt[i],-2.0),pow(vRegionEt[j],-2.0));
+	// Set vector of parameters of each pair
+	std::vector<delta> Delta;
+	
+	Delta[i].dist = dist;
+	Delta[i].bist = bist;
+	Delta[i].cluster = dist < bist;
+	Delta[i].etai = vRegionEta[i];
+	Delta[i].etaj = vRegionEta[j];
+	Delta[i].phii = vRegionPhi[i];
+	Delta[i].phij = vRegionPhi[j];
+    }
   }
- }
-}
-
+};
+  
+ 
 L1TRegionNtupleProducer::L1TRegionNtupleProducer( const ParameterSet & cfg ) :
   ecalSrc_(consumes<EcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("ecalDigis"))),
   hcalSrc_(consumes<HcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("hcalDigis"))),
@@ -222,7 +221,7 @@ void L1TRegionNtupleProducer::analyze( const Event& evt, const EventSetup& es )
 	 regionPhi->Fill(phi);
 	 regionPt->Fill(pt);
 
-	 cluster.push_back(temp);
+	 clusters.push_back(temp);
 	 i++;
       }
     }
