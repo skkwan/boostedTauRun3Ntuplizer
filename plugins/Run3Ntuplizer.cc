@@ -16,6 +16,8 @@
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/TauReco/interface/PFTau.h"
 #include "DataFormats/Common/interface/RefToPtr.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 
 
 #include "DataFormats/Math/interface/deltaR.h"
@@ -28,25 +30,34 @@ using std::endl;
 using std::vector;
 
 bool compareByPtJets (l1extra::L1JetParticle i,l1extra::L1JetParticle j) { return(i.pt()>j.pt()); };
+bool compareByPtTaus (l1t::Tau i,l1t::Tau j) { return(i.pt()>j.pt()); };
+
+//vector<l1extra::L1JetParticle>        "l1extraParticles"          "IsoTau"          "RECO"
+//vector<l1extra::L1JetParticle>        "l1extraParticles"          "Tau"             "RECO"
 
 Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
-  ecalSrc_(consumes<EcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("ecalDigis"))),
-  hcalSrc_(consumes<HcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("hcalDigis"))),
-  jetSrc_(consumes<vector<pat::Jet> >(cfg.getParameter<edm::InputTag>("recoJets"))),
-  jetSrcAK8_(consumes<vector<pat::Jet> >(cfg.getParameter<edm::InputTag>("recoJetsAK8"))),
+  ecalSrc_(  consumes<EcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("ecalDigis"))),
+  hcalSrc_(  consumes<HcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("hcalDigis"))),
+  jetSrc_(    consumes<vector<pat::Jet> >(cfg.getParameter<edm::InputTag>("recoJets"))),
+  jetSrcAK8_( consumes<vector<pat::Jet> >(cfg.getParameter<edm::InputTag>("recoJetsAK8"))),
+  tauSrc_(   consumes< vector<pat::Tau>     >(cfg.getParameter<edm::InputTag>("miniTaus"))),
+  genSrc_ ((        cfg.getParameter<edm::InputTag>( "genParticles"))),
   regionSource_(consumes<vector <L1CaloRegion> >(cfg.getParameter<edm::InputTag>("UCTRegion"))),
-  centralJets_(consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTCentralJets"))),
-  forwardJets_(consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTForwardJets"))),
+  stage2TauSrc_(    consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("stage2Taus" ))),
+  stage2IsoTauSrc_( consumes<vector<l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("stage2IsoTaus"))),
+  stage2DigisTauSrc_( consumes<BXVector<l1t::Tau> >(cfg.getParameter<edm::InputTag>("stage2DigisTaus"))),
+  centralJets_(     consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTCentralJets"))),
+  forwardJets_(     consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTForwardJets"))),
   genJets_(consumes<vector <reco::GenJet> >(cfg.getParameter<edm::InputTag>("genJets")))
   {
-
+    genToken_ =     consumes<std::vector<reco::GenParticle> >(genSrc_);
 
     folderName_          = cfg.getUntrackedParameter<std::string>("folderName");
     recoPt_              = cfg.getParameter<double>("recoPtCut");
     isData_              = cfg.getParameter<bool>("isData");
     folder               = tfs_->mkdir(folderName_);
     //folder->cd();
-    regionTree = folder.make<TTree>("EfficiencyTree", "Efficiency Tree");
+    regionTree = folder.make<TTree>("RegionTree", "Region Tree");
     regionTree->Branch("run",        &run,     "run/I");
     regionTree->Branch("lumi",       &lumi,    "lumi/I");
     regionTree->Branch("event",      &event,   "event/I");
@@ -100,8 +111,17 @@ Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
     createBranches(genTree);
     createBranchesGen(genTree);
 
-    efficiencyTree = folder.make<TTree>("efficiencyTree", "Reco Matched Jet Tree ");
+    efficiencyTree = folder.make<TTree>("efficiencyTree", "Gen Matched Jet Tree ");
     createBranches(efficiencyTree);
+
+    l1Tree = folder.make<TTree>("l1Tree", "l1 Jet Tree ");
+    createBranches(l1Tree);
+
+    tauTree = folder.make<TTree>("tauTree", "gen Matched Tau Tree ");
+    createBranches(tauTree);
+    createBranchesTau(tauTree);
+    
+
 
   }
 
@@ -145,8 +165,40 @@ void Run3Ntuplizer::createBranches(TTree *tree){
     tree->Branch("l1Matched_2",   &l1Matched_2, "l1Matched_2/I");
     tree->Branch("nRecoJets",     &nRecoJets,    "nRecoJets/I");
     tree->Branch("nL1Jets",       &nL1Jets,      "nL1Jets/I");
-
+    tree->Branch("vbfBDT",        &vbfBDT,       "vbfBDT/D");
   }
+
+void Run3Ntuplizer::createBranchesTau(TTree *tree){
+
+  tree->Branch("l1TauPt_1",       &l1TauPt_1,   "l1TauPt_1/D");
+  tree->Branch("l1TauEta_1",      &l1TauEta_1,  "l1TauEta_1/D");
+  tree->Branch("l1TauPhi_1",      &l1TauPhi_1,  "l1TauPhi_1/D");
+
+  tree->Branch("l1TauPt_2",       &l1TauPt_2,   "l1TauPt_2/D");
+  tree->Branch("l1TauEta_2",      &l1TauEta_2,  "l1TauEta_2/D");
+  tree->Branch("l1TauPhi_2",      &l1TauPhi_2,  "l1TauPhi_2/D");
+
+  tree->Branch("recoTauPt_1",     &recoTauPt_1, "recoTauPt_1/D");
+  tree->Branch("recoTauEta_1",    &recoTauEta_1,"recoTauEta_1/D");
+  tree->Branch("recoTauPhi_1",    &recoTauPhi_1,"recoTauPhi_1/D");
+  tree->Branch("recoTauDM_1",     &recoTauDM_1, "recoTauDM_1/D");
+
+  tree->Branch("recoTauPt_2",     &recoTauPt_2, "recoTauPt_2/D");
+  tree->Branch("recoTauEta_2",    &recoTauEta_2,"recoTauEta_2/D");
+  tree->Branch("recoTauPhi_2",    &recoTauPhi_2,"recoTauPhi_2/D");
+  tree->Branch("recoTauDM_2",     &recoTauDM_2, "recoTauDM_2/D");
+
+  tree->Branch("genTauPt_1",      &genTauPt_1,  "genTauPt_1/D");
+  tree->Branch("genTauEta_1",     &genTauEta_1, "genTauEta_1/D");
+  tree->Branch("genTauPhi_1",     &genTauPhi_1, "genTauPhi_1/D");
+  tree->Branch("genTauDM_1",      &genTauDM_1,  "genTauDM_1/D");
+
+  tree->Branch("genTauPt_2",      &genTauPt_2,  "genTauPt_2/D");
+  tree->Branch("genTauEta_2",     &genTauEta_2, "genTauEta_2/D");
+  tree->Branch("genTauPhi_2",     &genTauPhi_2, "genTauPhi_2/D");
+  tree->Branch("genTauDM_2",      &genTauDM_2,  "genTauDM_2/D");
+
+}
 
 void Run3Ntuplizer::createBranchesGen(TTree *tree){
     tree->Branch("genPt_1",  &genPt_1,   "genPt_1/D");
@@ -171,12 +223,31 @@ void Run3Ntuplizer::createBranchesGen(TTree *tree){
 
 
 void Run3Ntuplizer::beginJob( const EventSetup & es) {
-   std::cout<<"begin job..."<<std::endl;
+   cout<<"begin job..."<<std::endl;
 }
 
 void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
  {
-   std::cout<<"Analyzing..."<<std::endl;
+   //cout<<"Analyzing..."<<std::endl;
+    //TMVA
+    reader = new TMVA::Reader("!Color:Silent");
+    
+    /* Add variables to the Reader (must be the same name and type as the variables in the weight file(s) used. */  
+    l1Pt_1_f = 0;
+    l1Pt_2_f = 0;
+    l1DeltaEta_f = 0;
+    l1DeltaPhi_f = 0;
+    l1Mass_f = 0;
+    reader->TMVA::Reader::AddVariable("l1Pt_1",&l1Pt_1_f);
+    reader->TMVA::Reader::AddVariable("l1Pt_2",&l1Pt_2_f);
+    reader->TMVA::Reader::AddVariable("l1DeltaEta",&l1DeltaEta_f);
+    reader->TMVA::Reader::AddVariable("l1DeltaPhi",&l1DeltaPhi_f);
+    reader->TMVA::Reader::AddVariable("l1Mass",&l1Mass_f);
+    std::string CMSSW_BASE(getenv("CMSSW_BASE"));
+    std::string weightFile = CMSSW_BASE+"/src/L1Trigger/Run3Ntuplizer/data/TMVAClassification_BDT.weights.xml";
+    TString methodName = "BDT method";
+    reader->TMVA::Reader::BookMVA(methodName, weightFile);
+
    nEvents->Fill(1);
    
    run = evt.id().run();
@@ -186,6 +257,10 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
    
    std::vector<pat::Jet> goodJets;
    std::vector<pat::Jet> goodJetsAK8;
+
+   edm::Handle < vector<l1extra::L1JetParticle> > stage2Taus;
+   edm::Handle < vector<l1extra::L1JetParticle> > stage2IsoTaus;
+   edm::Handle < BXVector<l1t::Tau> > stage2DigiTaus;
   
    edm::Handle < vector<l1extra::L1JetParticle> > l1CentralJets;
    edm::Handle < vector<l1extra::L1JetParticle> > l1ForwardJets;
@@ -194,22 +269,57 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
    
    edm::Handle<EcalTrigPrimDigiCollection> ecalTPGs;
    edm::Handle<HcalTrigPrimDigiCollection> hcalTPGs;
+   edm::Handle< std::vector<pat::Tau> > miniTaus;
+
+   if(!evt.getByToken( tauSrc_, miniTaus))
+     cout<<"No miniAOD particles found"<<std::endl;
    
    
-  if(!evt.getByToken(ecalSrc_, ecalTPGs))
-    std::cout<<"ERROR GETTING THE ECAL TPGS"<<std::endl;
+   if(!evt.getByToken(ecalSrc_, ecalTPGs))
+    cout<<"ERROR GETTING THE ECAL TPGS"<<std::endl;
+
   if(!evt.getByToken(hcalSrc_, hcalTPGs))
-    std::cout<<"ERROR GETTING THE HCAL TPGS"<<std::endl;
+    cout<<"ERROR GETTING THE HCAL TPGS"<<std::endl;
+  
+  if(!evt.getByToken(stage2TauSrc_, stage2Taus))
+    cout<<"ERROR GETTING THE STAGE 2 TAUS"<<std::endl;
+  else
+    cout<<"Stage2 Tau Size: "<<stage2Taus->size()<<std::endl;
+  
+  if(!evt.getByToken(stage2DigisTauSrc_, stage2DigiTaus))
+    cout<<"ERROR GETTING THE STAGE 2 TAUS"<<std::endl;
+  else
+    cout<<"Stage2 Digi Tau Size: "<<stage2DigiTaus->size()<<std::endl;
+
+  if(!evt.getByToken(stage2IsoTauSrc_, stage2IsoTaus))
+    cout<<"ERROR GETTING THE STAGE 2 ISO TAUS"<<std::endl;
 
   if(!evt.getByToken(centralJets_, l1CentralJets))
-    std::cout<<"ERROR GETTING THE CENTRAL JETS"<<std::endl;
+    cout<<"ERROR GETTING THE CENTRAL JETS"<<std::endl;
 
   if(!evt.getByToken(forwardJets_, l1ForwardJets))
-    std::cout<<"ERROR GETTING THE FORWARD JETS"<<std::endl;
+    cout<<"ERROR GETTING THE FORWARD JETS"<<std::endl;
+
 
   if(!isData_)
     if(!evt.getByToken(genJets_, genJets))
-      std::cout<<"ERROR GETTING THE GEN JETS"<<std::endl;
+      cout<<"ERROR GETTING THE GEN JETS"<<std::endl;
+
+  //sort the L1 taus
+  vector<l1t::Tau> l1TausSorted;
+  vector<l1extra::L1JetParticle> l1IsoTausSorted;
+  for( BXVector<l1t::Tau>::const_iterator l1Tau = stage2DigiTaus->begin(); l1Tau != stage2DigiTaus->end(); l1Tau++ ){
+    l1TausSorted.push_back(*l1Tau);
+  }
+
+  for( vector<l1extra::L1JetParticle>::const_iterator l1Tau = stage2IsoTaus->begin(); l1Tau != stage2IsoTaus->end(); l1Tau++ ){
+    l1IsoTausSorted.push_back(*l1Tau);
+    if(abs(l1Tau->eta()) < 2.4) l1IsoTausSorted.push_back(*l1Tau);
+    //cout<<"l1Tau Pt: "<<l1Tau->pt()<<" Eta: "<<l1Tau->eta()<<" Phi: "<<l1Tau->phi()<<std::endl;
+  }
+
+  std::sort(l1TausSorted.begin(),l1TausSorted.end(),compareByPtTaus);
+  std::sort(l1IsoTausSorted.begin(),l1IsoTausSorted.end(),compareByPtJets);
 
   //sort the L1 jets
   vector<l1extra::L1JetParticle> l1JetsSorted;
@@ -244,7 +354,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
     }
   }
   else
-    std::cout<<"Error getting reco jets"<<std::endl;
+    cout<<"Error getting reco jets"<<std::endl;
 
   Handle<vector<pat::Jet> > jetsAK8;
   
@@ -256,12 +366,51 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
       //get rid of the cruft for analysis to save disk space
       if(jetAK8.pt() > recoPt_ ) {
 	goodJetsAK8.push_back(jetAK8);
-
       }
     }
   }
   else
-    std::cout<<"Error getting AK8 jets"<<std::endl;
+    cout<<"Error getting AK8 jets"<<std::endl;
+
+  // Now for the Taus
+  edm::Handle<GenParticleCollectionType> genParticleHandle;
+  if(!isData_){
+    if(!evt.getByToken(genToken_,genParticleHandle))
+      cout<<"No gen Particles Found "<<std::endl;
+  }  
+
+  vector<reco::GenParticle> genTaus;
+  vector<reco::GenParticle> genParticles;
+  vector<genVisTau> genVisTaus;
+  genVisTaus.clear();
+  
+  if(!isData_){
+    for(unsigned int i = 0; i< genParticleHandle->size(); i++){
+      edm::Ptr<reco::GenParticle> ptr(genParticleHandle, i);
+      genParticles.push_back(*ptr);
+      /*
+      if(abs(ptr->pdgId())==111 && abs(ptr->eta()<1.74)){
+	genPiZeros.push_back(*ptr);
+	//cout<<"Found PiZero PDGID 111 pt: "<<ptr->pt()<<" eta: "<<ptr->eta()<<" phi: "<<ptr->phi()<<std::endl;
+      }
+      if(abs(ptr->pdgId())==211 && abs(ptr->eta()<1.74)){
+	genPiPluss.push_back(*ptr);
+	//cout<<"Found PiPlus PDGID 111 pt: "<<ptr->pt()<<" eta: "<<ptr->eta()<<" phi: "<<ptr->phi()<<std::endl;
+      }*/
+      if(abs(ptr->pdgId())==15){
+	genTaus.push_back(*ptr);
+      }
+    }
+    for(auto genTau: genTaus){
+      reco::Candidate::LorentzVector visGenTau= getVisMomentum(&genTau, &genParticles);
+      genVisTau Temp;
+      int decayMode = GetDecayMode(&genTau);
+      Temp.p4 = visGenTau;
+      Temp.decayMode = decayMode;
+      genVisTaus.push_back(Temp);
+      //cout<<"Tau Decay Mode "<<decayMode<<"tau vis pt: "<<genPt<<" genEta: "<<genEta<<" genPhi: "<<genPhi<<std::endl;
+    }
+  }
 
   zeroOutAllVariables();
 
@@ -271,6 +420,9 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   //delta phi between two jets
   //invariant mass of two jets
   //total number of jets in the event
+  //first find l1 jet, then find reco jet, then find gen jet
+
+  //Fill tree with gen variables here  
   reco::GenJet genJet_1;
   reco::GenJet genJet_2;
   if(!isData_)
@@ -321,43 +473,169 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
 	recoMass = (goodJets.at(recoNthJet_1).p4() + goodJets.at(recoNthJet_2).p4()).mass();
       }
       
-      
       i = 0;
       int foundL1Jet_1 = 0;
       int foundL1Jet_2 = 0;
+      vbfBDT = -10;
+
       for(auto jet : l1JetsSorted){
-      if(reco::deltaR(jet, genJet_1)<0.1 && foundL1Jet_1 == 0 ){
-	l1Pt_1  = jet.pt();
-	l1Eta_1 = jet.eta();
-	l1Phi_1 = jet.phi();
-	l1NthJet_1 = i;
-	foundL1Jet_1 = 1;
+	if(reco::deltaR(jet, genJet_1)<0.5 && foundL1Jet_1 == 0 ){
+	  l1Pt_1  = jet.pt();
+	  l1Eta_1 = jet.eta();
+	  l1Phi_1 = jet.phi();
+	  l1NthJet_1 = i;
+	  foundL1Jet_1 = 1;
+	}
+	if(genPt_2 > 0 && reco::deltaR(jet, genJet_2)<0.5 && foundL1Jet_2 == 0 ){
+	  l1Pt_2  = jet.pt();
+	  l1Eta_2 = jet.eta();
+	  l1Phi_2 = jet.phi();
+	  l1NthJet_2 = i;
+	  foundL1Jet_2 = 1;
+	}
+	i++;
       }
-      if(genPt_2 > 0 && reco::deltaR(jet, genJet_2)<0.1 && foundL1Jet_2 == 0 ){
-	l1Pt_2  = jet.pt();
-	l1Eta_2 = jet.eta();
-	l1Phi_2 = jet.phi();
-	l1NthJet_2 = i;
-	foundL1Jet_2 = 1;
-      }
-      i++;
-      }
-      
+
       if(foundL1Jet_1>0 && foundL1Jet_2>0){
+	l1Pt_1_f = l1Pt_1;
+	l1Pt_2_f = l1Pt_2;
 	l1DeltaEta = l1Eta_1 - l1Eta_2;
 	l1DeltaPhi = l1Phi_1 - l1Phi_2;
+	l1DeltaEta_f = l1DeltaEta;
+	l1DeltaPhi_f = l1DeltaPhi;
 	l1DeltaR = reco::deltaR(l1JetsSorted.at(l1NthJet_1), l1JetsSorted.at(l1NthJet_2) );
 	l1Mass = (l1JetsSorted.at(l1NthJet_1).p4() + l1JetsSorted.at(l1NthJet_2).p4()).mass();
+	l1Mass_f = l1Mass;
+
+	std::vector<float> event;
+	event.push_back(l1Pt_1_f);
+	event.push_back(l1Pt_2_f);
+	event.push_back(l1DeltaEta_f);
+	event.push_back(l1DeltaPhi_f);
+	event.push_back(l1Mass_f);
+
+	vbfBDT = reader->EvaluateMVA(event, "BDT method");
       }
       
       nGenJets = genJets->size();
       nRecoJets = goodJets.size();
       nL1Jets = l1JetsSorted.size();
-      genTree->Fill();
+      //fixed
+      efficiencyTree->Fill();
     }
-  
- 
-  zeroOutAllVariables();
+  /// now fill the tree by L1 trigger
+
+  zeroOutAllVariables();  
+  //for(unsigned int i = 0; i < miniTaus->size(); i++){
+  if(miniTaus->size() > 0){
+    recoTauPt_1        = -99;
+    recoTauEta_1       = -99;
+    recoTauPhi_1       = -99;
+    //recoChargedIso = -99;
+    //recoNeutralIso = -99;
+    //recoRawIso     = -99;
+    recoTauDM_1  = -99;
+        
+    //see if we can switch this to cutting on tau MVA ID?
+    if(miniTaus->at(0).tauID("decayModeFinding")>0){
+      recoTauPt_1         = miniTaus->at(0).p4().Pt();
+      recoTauEta_1        = miniTaus->at(0).p4().Eta();
+      recoTauPhi_1        = miniTaus->at(0).p4().Phi();
+      //recoChargedIso = miniTaus->at(i).tauID("chargedIsoPtSum");
+      //recoNeutralIso = miniTaus->at(i).tauID("neutralIsoPtSum");
+      //recoRawIso     = miniTaus->at(i).tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits");
+      recoTauDM_1  = miniTaus->at(0).decayMode();
+      //cout<<"=== Found recoTau: "<<recoPt<<" Eta: "<<recoEta<<" Phi: "<< recoPhi <<std::endl;	
+      
+      l1TauPt_1  = -99;
+      l1TauEta_1 = -99;
+      l1TauPhi_1 = -99;
+      
+      for(unsigned int i = 0; i < l1TausSorted.size(); i++){
+	if(( reco::deltaR(l1TausSorted.at(i).eta(), l1TausSorted.at(i).phi(), 
+			  recoTauEta_1, recoTauPhi_1) < 0.5 )
+	   && (l1TausSorted.at(i).pt() > l1TauPt_1))
+	  {
+	    l1TauPt_1  = l1TausSorted.at(i).pt();
+	    l1TauEta_1 = l1TausSorted.at(i).eta();
+	    l1TauPhi_1 = l1TausSorted.at(i).phi();
+	    break;
+	  }
+      }
+
+      genTauPt_1  = -99;
+      genTauEta_1 = -99;
+      genTauPhi_1 = -99;
+      genTauDM_1  = -99;
+
+      if(!isData_)
+	for(auto genTau :genVisTaus){
+	  if(( reco::deltaR(genTau.p4.eta(), genTau.p4.phi(), 
+			    recoTauEta_1, recoTauPhi_1) < 0.5 )){
+	    genTauPt_1  = genTau.p4.pt();
+	    genTauEta_1 = genTau.p4.eta();
+	    genTauPhi_1 = genTau.p4.phi();
+	    genTauDM_1  = genTau.decayMode;
+	    break;
+	  }
+      }
+      
+    }
+  }
+
+  //finish tau 2 and also fill the general tau tree.
+  if(miniTaus->size() > 1){
+    recoTauPt_2        = -99;
+    recoTauEta_2       = -99;
+    recoTauPhi_2       = -99;
+    recoTauDM_2  = -99;
+        
+    //see if we can switch this to cutting on tau MVA ID?
+    if(miniTaus->at(1).tauID("decayModeFinding")>0){
+      recoTauPt_2         = miniTaus->at(1).p4().Pt();
+      recoTauEta_2        = miniTaus->at(1).p4().Eta();
+      recoTauPhi_2        = miniTaus->at(1).p4().Phi();
+      //recoChargedIso = miniTaus->at(i).tauID("chargedIsoPtSum");
+      //recoNeutralIso = miniTaus->at(i).tauID("neutralIsoPtSum");
+      //recoRawIso     = miniTaus->at(i).tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits");
+      recoTauDM_2  = miniTaus->at(1).decayMode();
+      //cout<<"=== Found recoTau: "<<recoPt<<" Eta: "<<recoEta<<" Phi: "<< recoPhi <<std::endl;	
+      
+      l1TauPt_2  = -99;
+      l1TauEta_2 = -99;
+      l1TauPhi_2 = -99;
+      
+      for(unsigned int i = 0; i < l1TausSorted.size(); i++){
+	if(( reco::deltaR(l1TausSorted.at(i).eta(),
+			  l1TausSorted.at(i).phi(), 
+			    recoTauEta_2, 
+			  recoTauPhi_2 ) < 0.5 )
+	   && (l1TausSorted.at(i).pt() > l1TauPt_1))
+	  {
+	    l1TauPt_2  = l1TausSorted.at(i).pt();
+	    l1TauEta_2 = l1TausSorted.at(i).eta();
+	    l1TauPhi_2 = l1TausSorted.at(i).phi();
+	    
+	  }
+      }
+      genTauPt_2  = -99;
+      genTauEta_2 = -99;
+      genTauPhi_2 = -99;
+      genTauDM_2  = -99;
+
+      if(!isData_)      
+	for(auto genTau :genVisTaus){
+	  if(( reco::deltaR(genTau.p4.eta(), genTau.p4.phi(), 
+			    recoTauEta_2, recoTauPhi_2) < 0.5 )){
+	    genTauPt_2  = genTau.p4.pt();
+	    genTauEta_2 = genTau.p4.eta();
+	    genTauPhi_2 = genTau.p4.phi();
+	    genTauDM_2  = genTau.decayMode;
+	    break;
+	  }
+	}
+    }
+  }
 
   //fill the jet variables here!
   //include delta eta between the two jets,
@@ -365,15 +643,17 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   //delta phi between two jets
   //invariant mass of two jets
   //total number of jets in the event
+
+  //Fill the tree without gen variables here  
   pat::Jet recoJet_1;
   pat::Jet recoJet_2;
   if(goodJets.size()>0){
-
+    //cout<<"goodjets size: "<<goodJets.size()<<std::endl;
     recoPt_1  = goodJets.at(0).pt();
     recoEta_1 = goodJets.at(0).eta();
     recoPhi_1 = goodJets.at(0).phi();
     recoJet_1 = goodJets.at(0);
-    
+    vbfBDT = -10;    
     if(goodJets.size()>1){
       recoJet_2 = goodJets.at(1);
       recoPt_2  = goodJets.at(1).pt();
@@ -390,7 +670,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
     l1extra::L1JetParticle l1Jet_1;
     l1extra::L1JetParticle l1Jet_2;
     for(auto jet : l1JetsSorted){
-      if(reco::deltaR(jet, recoJet_1)<0.1 && foundL1Jet_1 == 0 ){
+      if(reco::deltaR(jet, recoJet_1)<0.5 && foundL1Jet_1 == 0 ){
 	l1Jet_1 = jet;
 	l1Pt_1  = jet.pt();
 	l1Eta_1 = jet.eta();
@@ -398,7 +678,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
 	l1NthJet_1 = i;
 	foundL1Jet_1 = 1;
       }
-      if(genPt_2 > 0 && reco::deltaR(jet, recoJet_2)<0.1 && foundL1Jet_2 == 0 ){
+      if(reco::deltaR(jet, recoJet_2)<0.5 && foundL1Jet_2 == 0 ){
 	l1Jet_2 = jet;
 	l1Pt_2  = jet.pt();
 	l1Eta_2 = jet.eta();
@@ -408,20 +688,36 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
       }
       i++;
     }
-
+    
     if(foundL1Jet_1>0 && foundL1Jet_2>0){
+      l1Pt_1_f = l1Pt_1;
+      l1Pt_2_f = l1Pt_2;
       l1DeltaEta = l1Eta_1 - l1Eta_2;
       l1DeltaPhi = l1Phi_1 - l1Phi_2;
-      l1DeltaR = reco::deltaR(l1Jet_1, l1Jet_2);
-      l1Mass = (l1Jet_1.p4() + l1Jet_2.p4()).mass();
+      l1DeltaEta_f = l1DeltaEta;
+      l1DeltaPhi_f = l1DeltaPhi;
+      l1DeltaR = reco::deltaR(l1JetsSorted.at(l1NthJet_1), l1JetsSorted.at(l1NthJet_2) );
+      l1Mass = (l1JetsSorted.at(l1NthJet_1).p4() + l1JetsSorted.at(l1NthJet_2).p4()).mass();
+      l1Mass_f = l1Mass;
+      
+      std::vector<float> event;
+      event.push_back(l1Pt_1_f);
+      event.push_back(l1Pt_2_f);
+      event.push_back(l1DeltaEta_f);
+      event.push_back(l1DeltaPhi_f);
+      event.push_back(l1Mass_f);
+
+      vbfBDT = reader->EvaluateMVA(event, "BDT method");
     }
     
     nRecoJets = goodJets.size();
     nL1Jets = l1JetsSorted.size();
-    efficiencyTree->Fill();
+    l1Tree->Fill();
   }
 
-  std::cout<<"making regions"<<std::endl;
+  tauTree->Fill();
+
+  //cout<<"making regions"<<std::endl;
   vRegionEt.clear();
   vRegionEta.clear();
   vRegionPhi.clear();
@@ -431,7 +727,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   UCTGeometry g;
   //************* Get Regions and make region plots
   if(!evt.getByToken(regionSource_,regions)){
-    std::cout<<"ERROR GETTING THE REGIONS!!!"<<std::endl;}
+    cout<<"ERROR GETTING THE REGIONS!!!"<<std::endl;}
   else{
     for(vector<L1CaloRegion>::const_iterator testRegion = regions->begin(); testRegion != regions->end(); ++testRegion){
       //UCTRegionProcess uctRegion(*region);
@@ -467,7 +763,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
 
 	 if(!((l1tcalo::RegionTauVeto & testRegion->raw()) == l1tcalo::RegionTauVeto))
 	   isTauLike = 1;
-	 //std::cout<<"region eta,phi: "<<eta<<" , "<<phi<<std::endl;
+	 //cout<<"region eta,phi: "<<eta<<" , "<<phi<<std::endl;
 	 vRegionEt.push_back(pt);
 	 vRegionEta.push_back(eta);
 	 vRegionPhi.push_back(phi);
@@ -484,7 +780,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   }
 
 
-}
+ }
 
 
   
@@ -495,7 +791,7 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   
 void Run3Ntuplizer::initializeECALTPGMap(Handle<EcalTrigPrimDigiCollection> ecal, double eTowerETMap[73][57], bool testMode){
   
-  //std::cout << "ECAL TPGS" << std::endl;
+  //cout << "ECAL TPGS" << std::endl;
   for (size_t i = 0; i < ecal->size(); ++i) {
     int cal_ieta = (*ecal)[i].id().ieta();
     int cal_iphi = (*ecal)[i].id().iphi();
@@ -505,7 +801,7 @@ void Run3Ntuplizer::initializeECALTPGMap(Handle<EcalTrigPrimDigiCollection> ecal
     // TPG ieta ideal goes from 0-55.
     double LSB = 0.5;
     double et= (*ecal)[i].compressedEt()*LSB;
-    //if(et>0)std::cout<<"et "<< et<<std::endl;
+    //if(et>0)cout<<"et "<< et<<std::endl;
     if(testMode && iphi == 34 && ieta == 11){
       et = 40;
     }
@@ -551,7 +847,7 @@ void Run3Ntuplizer::initializeHCALTPGMap(const Handle<HcalTrigPrimDigiCollection
     short absieta = std::abs(tpg.id().ieta());
     short zside = tpg.id().zside();
     double energy = hcalScale->et(tpg.SOI_compressedEt(), absieta, zside); 
-    //if(energy>0)std::cout<<"energy "<< energy<<std::endl;
+    //if(energy>0)cout<<"energy "<< energy<<std::endl;
 
     if(testMode && iphi == 34 && ieta == 12){
       energy = 40;
@@ -562,7 +858,7 @@ void Run3Ntuplizer::initializeHCALTPGMap(const Handle<HcalTrigPrimDigiCollection
 
       //(*hcal)[i].SOI_compressedEt(), absieta, zside)*LSB; //*LSB
       //if(energy>0)
-      //std::cout<<"hcal iphi "<<iphi<<" ieta "<<ieta<<" energy "<<energy<<std::endl;
+      //cout<<"hcal iphi "<<iphi<<" ieta "<<ieta<<" energy "<<energy<<std::endl;
       hTowerETMap[iphi][ieta] = energy;
       //TPGSum_ +=energy;
       //TPGH_ += energy;
@@ -570,7 +866,7 @@ void Run3Ntuplizer::initializeHCALTPGMap(const Handle<HcalTrigPrimDigiCollection
       //hCorrTowerETMap[cal_iphi][cal_ieta] = alpha_h*energy;
       //cTPGH_ += alpha_h*energy;
       //if (energy > 0) {
-      //std::cout << "hcal eta/phi=" << ieta << "/" << iphi
+      //cout << "hcal eta/phi=" << ieta << "/" << iphi
       //<< " = (" << getEtaTPG(ieta) << "/" << getPhiTPG(iphi) << ") "
       //<< " et=" << (*hcal)[i].SOI_compressedEt()
       //<< " energy=" << energy
@@ -584,7 +880,7 @@ void Run3Ntuplizer::initializeHCALTPGMap(const Handle<HcalTrigPrimDigiCollection
       //} 
     }
     //else
-      //std::cout<<"HCAL failed checks iphi "<<iphi<<" ieta "<<ieta<<std::endl;
+      //cout<<"HCAL failed checks iphi "<<iphi<<" ieta "<<ieta<<std::endl;
   }//end HCAL TPG
 }
 

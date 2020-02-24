@@ -1,7 +1,7 @@
 import os
 import FWCore.ParameterSet.Config as cms
 
-process = cms.Process("L1TCaloSummaryTest")
+process = cms.Process("L1TCaloSummary")
 
 #import EventFilter.L1TXRawToDigi.util as util
 
@@ -81,14 +81,32 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 process.source = cms.Source("PoolSource",
                             #fileNames = cms.untracked.vstring(inputFiles)#,
                             #secondaryFileNames = cms.untracked.vstring(secondaryMap[options.inputFiles[0]])
-                            fileNames = cms.untracked.vstring('/store/data/Run2018D/SingleMuon/MINIAOD/22Jan2019-v2/110001/AFF3D4FC-C53C-F046-A242-ED57EA80A4C5.root'),
+                            fileNames = cms.untracked.vstring('/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/MINIAODSIM/106X_upgrade2018_realistic_v4-v2/10000/E6E75F38-FAFC-4242-9C38-52C2A3D451AC.root'),
                             secondaryFileNames = cms.untracked.vstring(
-                            '/store/data/Run2018D/SingleMuon/RAW/v1/000/321/149/00000/C49BF5FB-BB9E-E811-81C7-FA163E378C9C.root',
-                            '/store/data/Run2018D/SingleMuon/RAW/v1/000/320/757/00000/C48D27C4-6996-E811-8BF5-FA163E019504.root'
-                                                                   )
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/96B24904-342B-394E-B84B-341429E877F1.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/BBA135B4-8449-114C-B6DC-1447340C8FF2.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/E6674DCD-AF07-E24F-A254-4EFEC2DF40E8.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/FB2DCB4B-A9BA-1947-B661-FA03EF8D4ED9.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/BF573032-3292-F045-8F39-5EC7FBEE28BA.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/C587B60B-857E-7C48-90F1-23EC77B4BBF6.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/05BA435A-401F-084B-AA00-4B695B8BAA19.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/3159EC8E-F6A9-BF4B-A6BD-D0B8846A863F.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/CBC10CE6-691E-5C4F-A4BF-3D2AF0F59844.root',
+                                '/store/relval/CMSSW_10_6_0/RelValSinglePiE50HCAL/GEN-SIM-DIGI-RAW/106X_upgrade2018_realistic_v4-v2/10000/7A513272-70AD-B149-B9B0-6469897C2417.root'
+                            #'/store/data/Run2018D/SingleMuon/RAW/v1/000/321/149/00000/C49BF5FB-BB9E-E811-81C7-FA163E378C9C.root',
+                            #'/store/data/Run2018D/SingleMuon/RAW/v1/000/320/757/00000/C48D27C4-6996-E811-8BF5-FA163E019504.root'
+                                                                   ),
+                                inputCommands = cms.untracked.vstring("keep *", 
+                                                                      "drop patHcalDepthEnergyFractionsedmValueMap_packedPFCandidates_hcalDepthEnergyFractions_RECO")
 )
 
-process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("321149:1055","320757:185")
+process.source = cms.Source("PoolSource",
+                            fileNames = cms.untracked.vstring('file:l1TFullEvent.root'),
+                            inputCommands = cms.untracked.vstring("keep *", 
+                                      "drop patHcalDepthEnergyFractionsedmValueMap_packedPFCandidates_hcalDepthEnergyFractions_RECO")
+)
+
+#process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("321149:1055","320757:185")
 
 process.options = cms.untracked.PSet(
 

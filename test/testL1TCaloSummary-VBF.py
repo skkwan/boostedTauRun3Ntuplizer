@@ -72,7 +72,7 @@ process.uct2016EmulatorDigis.verbose = cms.bool(False)
 process.uct2016EmulatorDigis.ecalToken = cms.InputTag("l1tCaloLayer1Digis")
 process.uct2016EmulatorDigis.hcalToken = cms.InputTag("l1tCaloLayer1Digis")
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10000) )
 
 process.source = cms.Source("PoolSource",
                             #fileNames = cms.untracked.vstring(inputFiles)#,
@@ -106,7 +106,8 @@ process.configurationMetadata = cms.untracked.PSet(
 
 process.out = cms.OutputModule("PoolOutputModule",
     fileName = cms.untracked.string("l1TFullEvent.root"),
-    outputCommands = cms.untracked.vstring('drop *') #'keep *_*_*_L1TCaloSummaryTest')
+    outputCommands = cms.untracked.vstring('keep *')
+    #outputCommands = cms.untracked.vstring('drop *') #'keep *_*_*_L1TCaloSummaryTest')
     #outputCommands = cms.untracked.vstring('drop *', 'keep *_l1tCaloLayer1Digis_*_*, keep *_*_*_L1TCaloSummaryTest' )
 )
 
@@ -119,8 +120,9 @@ process.TFileService = cms.Service(
 
 process.p = cms.Path(process.l1tCaloLayer1Digis*process.uct2016EmulatorDigis*process.l1NtupleProducer)
 
-#process.e = cms.EndPath(process.out)
+process.e = cms.EndPath(process.out)
 
+#process.schedule = cms.Schedule(process.p,process.e)
 process.schedule = cms.Schedule(process.p)
 
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
@@ -131,5 +133,5 @@ from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEar
 process = customiseEarlyDelete(process)
 # End adding early deletion
 
-#dump_file = open('dump.py','w')
-#dump_file.write(process.dumpPython())
+dump_file = open('dump.py','w')
+dump_file.write(process.dumpPython())

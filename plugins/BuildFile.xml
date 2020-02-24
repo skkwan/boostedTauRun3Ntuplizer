@@ -42,6 +42,7 @@
 <use   name="EgammaAnalysis/ElectronTools"/>
 <use   name="RecoBTag/BTagTools"/>
 <use   name="RecoVertex/KinematicFitPrimitives"/>
+<use   name="CommonTools/MVAUtils"/>
 <use   name="clhep"/>
 <use   name="RecoVertex/AdaptiveVertexFit"/>
 <use   name="root"/>

@@ -32,7 +32,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
-
+#include "L1Trigger/Run3Ntuplizer/plugins/helpers.h"
 // GCT and RCT data formats
 #include "DataFormats/L1CaloTrigger/interface/L1CaloCollections.h"
 #include "DataFormats/L1GlobalCaloTrigger/interface/L1GctCollections.h"
@@ -46,6 +46,10 @@
 #include "DataFormats/L1Trigger/interface/BXVector.h"
 #include "DataFormats/L1Trigger/interface/Tau.h"
 
+/* TMVA */
+#include "TMVA/Tools.h"
+#include "TMVA/Reader.h"
+#include "TMVA/MethodCuts.h"
 
 #include <memory>
 #include <math.h>
@@ -63,6 +67,7 @@
 #include "DataFormats/L1CaloTrigger/interface/L1CaloRegion.h"
 #include "L1Trigger/L1TCaloLayer1/src/UCTRegion.hh"
 #include "L1Trigger/L1TCaloLayer1/src/UCTGeometry.hh"
+
 
 //
 // class declaration
@@ -111,9 +116,11 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   TH1F* recoJetAK8_eta;
   TH1F* recoJetAK8_phi;
 
+  TTree* l1Tree;
   TTree* genTree;
   TTree* efficiencyTree;
   TTree* efficiencyTreeAK8;
+  TTree* tauTree;
 
   int run, lumi, event;
   float nvtx;
@@ -121,6 +128,7 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   void initializeECALTPGMap(edm::Handle<EcalTrigPrimDigiCollection> ecal, double eTowerETMap[73][57], bool testMode = false);
   void zeroOutAllVariables();
   void createBranches(TTree *tree);
+  void createBranchesTau(TTree *tree);
   void createBranchesGen(TTree *tree);
 
  protected:
@@ -136,11 +144,12 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   
  private:
   // ----------member data ---------------------------
-
+  typedef std::vector<reco::GenParticle> GenParticleCollectionType;
   int nev_; // Number of events processed
   bool verbose_;
   std::ofstream logFile_;
   edm::InputTag rctSource_; 
+  edm::InputTag genSrc_;
 
   edm::EDGetTokenT<vector<pat::PackedCandidate> > pfCandsToken_;  
   edm::EDGetTokenT<L1CaloRegionCollection> L1RegionCollection;
@@ -154,11 +163,24 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   edm::EDGetTokenT<vector<pat::Jet> > jetSrcAK8_;
   edm::EDGetTokenT<vector<pat::Tau> > tauSrc_;
   edm::EDGetTokenT<vector <L1CaloRegion> > regionSource_;
+  edm::EDGetTokenT<vector <l1extra::L1JetParticle> > stage2TauSrc_;
+  edm::EDGetTokenT<vector <l1extra::L1JetParticle> > stage2IsoTauSrc_;
+  edm::EDGetTokenT<BXVector<l1t::Tau> > stage2DigisTauSrc_;
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > centralJets_;
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > forwardJets_;
   edm::EDGetTokenT<vector <reco::GenJet> > genJets_;
+  edm::EDGetTokenT<std::vector<reco::GenParticle> > genToken_;
 
   std::string folderName_;
+
+  /* Create the Reader object. */
+  TMVA::Reader *reader;
+
+  Float_t l1Pt_1_f;
+  Float_t l1Pt_2_f;
+  Float_t l1DeltaEta_f;
+  Float_t l1DeltaPhi_f;
+  Float_t l1Mass_f;
 
   double jetPt, jetEta, jetPhi;
   double recoPt, recoEta, recoPhi;
@@ -173,12 +195,22 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   double recoPt_2, recoEta_2, recoPhi_2;
   double l1Pt_2, l1Eta_2, l1Phi_2;
 
+  double genTauPt_1, genTauEta_1, genTauPhi_1, genTauDM_1;
+  double recoTauPt_1, recoTauEta_1, recoTauPhi_1, recoTauDM_1;
+  double l1TauPt_1, l1TauEta_1, l1TauPhi_1;
+  
+  double genTauPt_2, genTauEta_2, genTauPhi_2, genTauDM_2;
+  double recoTauPt_2, recoTauEta_2, recoTauPhi_2, recoTauDM_2;
+  double l1TauPt_2, l1TauEta_2, l1TauPhi_2;
+
   int l1Matched_1, l1Matched_2;
   int genMatched_1, genMatched_2;
 
   double genDeltaEta, genDeltaPhi, genDeltaR, genMass;
   double recoDeltaEta, recoDeltaPhi, recoDeltaR, recoMass;
   double l1DeltaEta, l1DeltaPhi, l1DeltaR, l1Mass;
+
+  double vbfBDT;
 
   int nGenJets, nRecoJets, nL1Jets;
 
