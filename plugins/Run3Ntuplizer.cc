@@ -1,7 +1,7 @@
 /*
  * \file Run3Ntuplizer.cc
  *
- * \author I. Ojalvo
+ * author I. Ojalvo
  * Written for miniAOD
  */
 
