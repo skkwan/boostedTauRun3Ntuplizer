@@ -45,6 +45,7 @@
 
 #include "DataFormats/L1Trigger/interface/BXVector.h"
 #include "DataFormats/L1Trigger/interface/Tau.h"
+#include "DataFormats/L1Trigger/interface/Muon.h"
 
 /* TMVA */
 #include "TMVA/Tools.h"
@@ -166,6 +167,7 @@ class Run3Ntuplizer : public edm::EDAnalyzer {
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > stage2TauSrc_;
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > stage2IsoTauSrc_;
   edm::EDGetTokenT<BXVector<l1t::Tau> > stage2DigisTauSrc_;
+  edm::EDGetTokenT<BXVector<l1t::Muon> > stage2DigisGMTSrc_;
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > centralJets_;
   edm::EDGetTokenT<vector <l1extra::L1JetParticle> > forwardJets_;
   edm::EDGetTokenT<vector <reco::GenJet> > genJets_;

@@ -34,7 +34,7 @@ bool compareByPtTaus (l1t::Tau i,l1t::Tau j) { return(i.pt()>j.pt()); };
 
 //vector<l1extra::L1JetParticle>        "l1extraParticles"          "IsoTau"          "RECO"
 //vector<l1extra::L1JetParticle>        "l1extraParticles"          "Tau"             "RECO"
-
+//BXVector<l1t::Muon>                   "gmtStage2Digis"            "Muon"            "RECO"
 Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
   ecalSrc_(  consumes<EcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("ecalDigis"))),
   hcalSrc_(  consumes<HcalTrigPrimDigiCollection>(cfg.getParameter<edm::InputTag>("hcalDigis"))),
@@ -46,6 +46,7 @@ Run3Ntuplizer::Run3Ntuplizer( const ParameterSet & cfg ) :
   stage2TauSrc_(    consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("stage2Taus" ))),
   stage2IsoTauSrc_( consumes<vector<l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("stage2IsoTaus"))),
   stage2DigisTauSrc_( consumes<BXVector<l1t::Tau> >(cfg.getParameter<edm::InputTag>("stage2DigisTaus"))),
+  stage2DigisGMTSrc_( consumes<BXVector<l1t::Muon> >(cfg.getParameter<edm::InputTag>("gmtStage2Digis"))),
   centralJets_(     consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTCentralJets"))),
   forwardJets_(     consumes<vector <l1extra::L1JetParticle> >(cfg.getParameter<edm::InputTag>("l1UCTForwardJets"))),
   genJets_(consumes<vector <reco::GenJet> >(cfg.getParameter<edm::InputTag>("genJets")))
@@ -261,7 +262,9 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
    edm::Handle < vector<l1extra::L1JetParticle> > stage2Taus;
    edm::Handle < vector<l1extra::L1JetParticle> > stage2IsoTaus;
    edm::Handle < BXVector<l1t::Tau> > stage2DigiTaus;
-  
+
+   edm::Handle < BXVector<l1t::Muon> > stage2GMT;
+
    edm::Handle < vector<l1extra::L1JetParticle> > l1CentralJets;
    edm::Handle < vector<l1extra::L1JetParticle> > l1ForwardJets;
 
@@ -288,8 +291,13 @@ void Run3Ntuplizer::analyze( const Event& evt, const EventSetup& es )
   
   if(!evt.getByToken(stage2DigisTauSrc_, stage2DigiTaus))
     cout<<"ERROR GETTING THE STAGE 2 TAUS"<<std::endl;
+  //else
+    //cout<<"Stage2 Digi Tau Size: "<<stage2DigiTaus->size()<<std::endl;
+    
+  if(!evt.getByToken(stage2DigisGMTSrc_, stage2GMT))
+    cout<<"ERROR GETTING THE STAGE 2 Muons"<<std::endl;
   else
-    cout<<"Stage2 Digi Tau Size: "<<stage2DigiTaus->size()<<std::endl;
+    cout<<"Stage2 Digi Muon Size: "<<stage2GMT->size()<<std::endl;
 
   if(!evt.getByToken(stage2IsoTauSrc_, stage2IsoTaus))
     cout<<"ERROR GETTING THE STAGE 2 ISO TAUS"<<std::endl;
