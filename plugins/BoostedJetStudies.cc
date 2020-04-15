@@ -79,6 +79,8 @@ using namespace l1tcalo;
 using namespace l1extra;
 using namespace std;
 
+bool compareByPt (l1extra::L1JetParticle i, l1extra::L1JetParticle j) { return(i.pt()>j.pt()); };
+
 //
 // class declaration
 //
@@ -89,6 +91,7 @@ public:
   ~BoostedJetStudies();
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+  void zeroOutAllVariables();
 
 private:
   void analyze(const edm::Event& evt, const edm::EventSetup& es);      
@@ -175,6 +178,9 @@ private:
 
   double vbfBDT;
   double recoPt_;
+  std::vector<int> nSubJets, nBHadrons, HFlav;
+  std::vector<std::vector<int>> subJetHFlav;
+  std::vector<float> tau1, tau2, tau3;
 
   int nGenJets, nRecoJets, nL1Jets;
   int l1Matched_1, l1Matched_2;
@@ -298,14 +304,14 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
 {
   using namespace edm;
 
-   nEvents->Fill(1);
-   run = evt.id().run();
-   lumi = evt.id().luminosityBlock();
-   event = evt.id().event();
-   Handle<L1CaloRegionCollection> regions;
+  nEvents->Fill(1);
+  run = evt.id().run();
+  lumi = evt.id().luminosityBlock();
+  event = evt.id().event();
+  Handle<L1CaloRegionCollection> regions;
    
-   std::vector<pat::Jet> goodJets;
-   std::vector<pat::Jet> goodJetsAK8;
+  std::vector<pat::Jet> goodJets;
+  std::vector<pat::Jet> goodJetsAK8;
 
 
   // Start Running Layer 1
@@ -583,15 +589,109 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   else
     cout<<"Error getting AK8 jets"<<std::endl;
   std::cout<<"AK8 jets size: "<<jetsAK8->size()<<std::endl;
-  for(auto jet:goodJetsAK8){
-    std::cout<<"N BHadrons: "<< jet.jetFlavourInfo().getbHadrons().size()<<std::endl;
-    //take more variables from here: https://github.com/gouskos/HiggsToBBNtupleProducerTool/blob/opendata_80X/NtupleAK8/src/FatJetInfoFiller.cc#L215-L217
-    // https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideBTagMCTools
-  }
 
-  //Match to boosted jets and see if we can match subjettiness functions...
-  //for(std::list<UCTObject*>::const_iterator i = boostedJetObjs.begin(); i != boostedJetObjs.end(); i++) {
-  //}  
+  zeroOutAllVariables();
+
+  if(goodJetsAK8.size()>0){
+
+    for(auto jet:goodJetsAK8){
+      tau1.push_back(jet.userFloat("NjettinessAK8Puppi:tau1"));
+      tau2.push_back(jet.userFloat("NjettinessAK8Puppi:tau2"));
+      tau3.push_back(jet.userFloat("NjettinessAK8Puppi:tau3"));
+      nSubJets.push_back(jet.subjets("SoftDropPuppi").size());
+      HFlav.clear();
+      for(unsigned int isub=0; isub<((jet.subjets("SoftDropPuppi")).size()); isub++){
+        HFlav.push_back(jet.subjets("SoftDropPuppi")[isub]->hadronFlavour());
+      }
+      subJetHFlav.push_back(HFlav);
+      nBHadrons.push_back(jet.jetFlavourInfo().getbHadrons().size());
+      std::cout<<"N subjets: "<< jet.subjets("SoftDropPuppi").size()<<std::endl;
+      std::cout<<"N BHadrons: "<< jet.jetFlavourInfo().getbHadrons().size()<<std::endl;
+      //take more variables from here: https://github.com/gouskos/HiggsToBBNtupleProducerTool/blob/opendata_80X/NtupleAK8/src/FatJetInfoFiller.cc#L215-L217
+      // https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideBTagMCTools
+    }
+
+    //Match to boosted jets and see if we can match subjettiness functions...
+    vector<l1extra::L1JetParticle> l1JetsSorted;
+    for( vector<l1extra::L1JetParticle>::const_iterator l1Jet = bJetCands->begin(); l1Jet != bJetCands->end(); l1Jet++ ){
+      l1JetsSorted.push_back(*l1Jet);
+    }
+    if(l1JetsSorted.size() > 1){  std::sort(l1JetsSorted.begin(),l1JetsSorted.end(),compareByPt);}
+    pat::Jet recoJet_1;
+    pat::Jet recoJet_2;
+
+    recoPt_1  = goodJetsAK8.at(0).pt();
+    recoEta_1 = goodJetsAK8.at(0).eta();
+    recoPhi_1 = goodJetsAK8.at(0).phi();
+    recoJet_1 = goodJetsAK8.at(0);
+
+    if(goodJetsAK8.size()>1){
+      recoJet_2 = goodJetsAK8.at(1);
+      recoPt_2  = goodJetsAK8.at(1).pt();
+      recoEta_2 = goodJetsAK8.at(1).eta();
+      recoPhi_2 = goodJetsAK8.at(1).phi();
+      recoDeltaEta = recoEta_1 - recoEta_2;
+      recoDeltaPhi = recoPhi_1 - recoPhi_2;
+      recoDeltaR = reco::deltaR(recoJet_1.p4(), recoJet_1.p4() );
+      recoMass = (recoJet_1.p4() + recoJet_2.p4()).mass();
+    }
+
+    int i = 0;
+    int foundL1Jet_1 = 0;
+    int foundL1Jet_2 = 0;
+    l1extra::L1JetParticle l1Jet_1;
+    l1extra::L1JetParticle l1Jet_2;
+    //for(std::list<UCTObject*>::const_iterator i = boostedJetObjs.begin(); i != boostedJetObjs.end(); i++) {
+      //const UCTObject test = *i;
+    if(l1JetsSorted.size() > 0){
+      for(auto jet : l1JetsSorted){
+        if(reco::deltaR(jet, recoJet_1)<0.4 && foundL1Jet_1 == 0 ){
+          l1Jet_1 = jet;
+          l1Pt_1  = jet.pt();
+          l1Eta_1 = jet.eta();
+          l1Phi_1 = jet.phi();
+          l1NthJet_1 = i;
+          foundL1Jet_1 = 1;
+        }
+        if(l1JetsSorted.size() > 1){
+          if(recoPt_2 > 0 && reco::deltaR(jet, recoJet_2)<0.4 && foundL1Jet_2 == 0 ){
+            l1Jet_2 = jet;
+            l1Pt_2  = jet.pt();
+            l1Eta_2 = jet.eta();
+            l1Phi_2 = jet.phi();
+            l1NthJet_2 = i;
+            foundL1Jet_2 = 1;
+          }
+        }
+        i++;
+      }
+    }
+  }  
+
+  efficiencyTree->Fill();
+}
+
+void BoostedJetStudies::zeroOutAllVariables(){
+  genPt=-99; genEta=-99; genPhi=-99;
+  recoPt=-99; recoEta=-99; recoPhi=-99;
+  l1Pt=-99; l1Eta=-99; l1Phi=-99;
+  genPt_1=-99; genEta_1=-99; genPhi_1=-99;
+  recoPt_1=-99; recoEta_1=-99; recoPhi_1=-99;
+  l1Pt_1=-99; l1Eta_1=-99; l1Phi_1=-99;
+  genPt_2=-99; genEta_2=-99; genPhi_2=-99;
+  recoPt_2=-99; recoEta_2=-99; recoPhi_2=-99;
+  l1Pt_2=-99; l1Eta_2=-99; l1Phi_2=-99;
+  genDeltaEta=-99; genDeltaPhi=-99; genDeltaR=-99; genMass=-99;
+  recoDeltaEta=-99; recoDeltaPhi=-99; recoDeltaR=-99; recoMass=-99;
+  l1DeltaEta=-99; l1DeltaPhi=-99; l1DeltaR=-99; l1Mass=-99;
+  l1NthJet_1=-99; l1NthJet_2=-99;
+  recoNthJet_1=-99; recoNthJet_2=-99;
+  vbfBDT=-99; recoPt_=-99;
+  nGenJets=-99; nRecoJets=-99; nL1Jets=-99;
+  l1Matched_1=-99; l1Matched_2=-99;
+ 
+  nSubJets.clear(); nBHadrons.clear(); subJetHFlav.clear(); 
+  tau1.clear(); tau2.clear(); tau3.clear();
 }
 
 void BoostedJetStudies::print() {
@@ -662,6 +762,13 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("nRecoJets",     &nRecoJets,    "nRecoJets/I");
     tree->Branch("nL1Jets",       &nL1Jets,      "nL1Jets/I");
     tree->Branch("vbfBDT",        &vbfBDT,       "vbfBDT/D");
+
+    tree->Branch("tau1",          &tau1);
+    tree->Branch("tau2",          &tau2);
+    tree->Branch("tau3",          &tau3);
+    tree->Branch("nSubJets",      &nSubJets);
+    tree->Branch("subJetHFlav",   &subJetHFlav);
+    tree->Branch("nBHadrons",     &nBHadrons);
   }
 
 
