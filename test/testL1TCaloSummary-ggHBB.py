@@ -44,6 +44,7 @@ process.load('Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cf
 process.load('Configuration.StandardSequences.RawToDigi_Data_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+process.load('Configuration.StandardSequences.RawToDigi_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 
@@ -63,6 +64,9 @@ process.load('L1Trigger.L1TCaloSummary.uct2016EmulatorDigis_cfi')
 process.load("L1Trigger.Run3Ntuplizer.l1BoostedJetStudies_cfi")
 
 #process.l1NtupleProducer.isData = cms.bool(False)
+process.l1NtupleProducer.ecalToken = cms.InputTag("ecalDigis","EcalTriggerPrimitives","L1TCaloSummaryTest")
+#process.l1NtupleProducer.ecalToken = cms.InputTag("ecalDigis")
+process.l1NtupleProducer.hcalToken = cms.InputTag("hcalDigis")
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)
@@ -78,18 +82,18 @@ process.source = cms.Source("PoolSource",
                             #fileNames = cms.untracked.vstring(inputFiles)#,
                             #secondaryFileNames = cms.untracked.vstring(secondaryMap[options.inputFiles[0]])
                             fileNames = cms.untracked.vstring(
-                                '/store/relval/CMSSW_10_4_0/RelValVBFHToBB_M125_Pow_py8_Evt_13UP18/MINIAODSIM/103X_upgrade2018_realistic_v8-v1/20000/286C228F-D674-6C49-81F3-B2318071239D.root'
+				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18MiniAOD/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/MINIAODSIM/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/1B0FC5E0-ACF7-0C49-8262-1F95F23C896B.root'
 ),
                             secondaryFileNames = cms.untracked.vstring(
-                                '/store/relval/CMSSW_10_4_0/RelValVBFHToBB_M125_Pow_py8_Evt_13UP18/GEN-SIM-DIGI-RAW-HLTDEBUG/103X_upgrade2018_realistic_v8-v1/20000/F15FCA3B-B8D2-794C-A600-509BDC50504B.root',
-                                '/store/relval/CMSSW_10_4_0/RelValVBFHToBB_M125_Pow_py8_Evt_13UP18/GEN-SIM-DIGI-RAW-HLTDEBUG/103X_upgrade2018_realistic_v8-v1/20000/14C9C7DB-6E8A-0C4E-92AE-65950CE7B1BA.root',
-                                '/store/relval/CMSSW_10_4_0/RelValVBFHToBB_M125_Pow_py8_Evt_13UP18/GEN-SIM-DIGI-RAW-HLTDEBUG/103X_upgrade2018_realistic_v8-v1/20000/6D628C9F-A1A4-D042-B40F-9413A004474C.root',
-                                '/store/relval/CMSSW_10_4_0/RelValVBFHToBB_M125_Pow_py8_Evt_13UP18/GEN-SIM-DIGI-RAW-HLTDEBUG/103X_upgrade2018_realistic_v8-v1/20000/B84D0D40-9D72-A14D-B884-3E16EAFDFF0F.root',
-                                '/store/relval/CMSSW_10_4_0/RelValVBFHToBB_M125_Pow_py8_Evt_13UP18/GEN-SIM-DIGI-RAW-HLTDEBUG/103X_upgrade2018_realistic_v8-v1/20000/93E1D268-E049-2045-9B3D-5BB6320FD518.root'
+				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/4187DAD9-3092-E448-9F4E-6B3616479547.root',
+				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/2FE6F8A3-9F3C-E14B-8F5F-F45BBE34AA30.root',
+				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/44D65997-B07E-8143-8B7D-B15A04DDC388.root',
+				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/6B447B66-341D-E742-A73A-AB39EEDD25CA.root',
+				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/8A7F5240-F850-934B-A3AE-A0FFC746FDCB.root',
                             )
 )
 
-
+process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:734","1:961","1:966","1:982","1:966")
 
 process.options = cms.untracked.PSet(
 
@@ -114,10 +118,10 @@ process.out = cms.OutputModule("PoolOutputModule",
 #Output
 process.TFileService = cms.Service(
 	"TFileService",
-	fileName = cms.string("l1TNtuple-VBF.root")
+	fileName = cms.string("l1TNtuple-ggHBB.root")
 )
 
-process.p = cms.Path(process.l1tCaloLayer1Digis*process.uct2016EmulatorDigis*process.l1NtupleProducer)
+process.p = cms.Path(process.RawToDigi*process.l1tCaloLayer1Digis*process.uct2016EmulatorDigis*process.l1NtupleProducer)
 
 process.e = cms.EndPath(process.out)
 
@@ -130,7 +134,11 @@ associatePatAlgosToolsTask(process)
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
 process = customiseEarlyDelete(process)
+
+process.options.numberOfThreads=cms.untracked.uint32(4)
+process.options.numberOfStreams=cms.untracked.uint32(0)
+
 # End adding early deletion
 
-dump_file = open('dump.py','w')
-dump_file.write(process.dumpPython())
+#dump_file = open('dump.py','w')
+#dump_file.write(process.dumpPython())
