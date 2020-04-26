@@ -367,7 +367,7 @@ int get5x5TPGs(const int maxTPGPt_eta,
 
   float getRecoPhi(int iphi){
     return towerPhiMap[iphi-1];
-  }
+  };
 
   float getRecoEta(int ieta, short zside){
     float eta = -999;

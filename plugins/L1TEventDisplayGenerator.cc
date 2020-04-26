@@ -31,7 +31,7 @@ L1TEventDisplayGenerator::L1TEventDisplayGenerator( const ParameterSet & cfg ) :
   {
     folderName_          = cfg.getUntrackedParameter<std::string>("folderName");
     recoPt_              = cfg.getParameter<double>("recoPtCut");
-    efficiencyTree = tfs_->make<TTree>("EfficiencyTree", "Efficiency Tree");
+    efficiencyTree = tfs_->make<TTree>("efficiencyTree", "Efficiency Tree");
 
     //efficiencyTree->Branch("hcalTpgs_Pt",  &hcalTpgs_Pt); 
     //efficiencyTree->Branch("hcalTpgs_Eta", &hcalTpgs_Eta); 
