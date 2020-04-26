@@ -75,11 +75,61 @@
 
 #include "L1Trigger/L1TCaloLayer1/src/L1TCaloLayer1FetchLUTs.hh"
 
+#pragma extra_include "TLorentzVector.h";
+#pragma link C++ class std::vector<TLorentzVector>;
+
 using namespace l1tcalo;
 using namespace l1extra;
 using namespace std;
 
 bool compareByPt (l1extra::L1JetParticle i, l1extra::L1JetParticle j) { return(i.pt()>j.pt()); };
+
+float towerEtaMap[28]= {
+    0.0435,
+    0.1305, 0.2175, 0.3045, 0.3915, 0.4785,
+    0.5655, 0.6525, 0.7395, 0.8265, 0.9135,
+    1.0005, 1.0875, 1.1745, 1.2615, 1.3485,
+    1.4355, 1.5225, 1.6095, 1.6965, 1.7835,
+    1.8705, 1.9575, 2.0445, 2.217, 2.391,
+    2.565, //2.739,
+    2.913,
+    };
+
+float towerPhiMap[72]=
+    {-0.131, -0.044, 0.044, 0.131, 0.218, 0.305, 0.393, 0.480, 0.567, 0.654, 0.742, 0.829, 0.916, 1.004, 1.091, 1.178, 1.265, 1.353, 1.440, 1.527, 1.614, 1.702, 1.789, 1.876, 1.963, 2.051, 2.138, 2.225, 2.313, 2.400, 2.487, 2.574, 2.662, 2.749, 2.836, 2.923, 3.011, 3.098,
+      -3.098, -3.011, -2.923, -2.836, -2.749, -2.662, -2.574, -2.487, -2.400, -2.313, -2.225, -2.138, -2.051, -1.963, -1.876, -1.789, -1.702, -1.614, -1.527, -1.440, -1.353, -1.265, -1.178, -1.091, -1.004, -0.916, -0.829, -0.742, -0.654, -0.567, -0.480, -0.393, -0.305, -0.218};
+
+float getRecoEta(int ieta, short zside){
+  float eta = -999;
+  if(ieta<0 || ieta>(28*2)){
+    std::cout<<"Error!!! towereta out of bounds in triggerGeometryTools.h "<<std::endl;
+    std::cout<<"ieta "<<ieta<<std::endl;
+    exit(0);
+  }
+  if(zside == 1)
+    eta = towerEtaMap[ieta];
+  else if(zside == -1)
+    eta = towerEtaMap[ieta];
+  else{
+    std::cout<<"Error!!! zside out of bounds in triggerGeometryTools.h "<<std::endl;
+    std::cout<<"zside "<<zside<<std::endl;
+    exit(0);
+  }
+  return eta;
+};
+
+float getRecoPhi(int iphi){
+  return towerPhiMap[iphi-1];
+};
+
+int TPGEtaRange(int ieta){
+  int iEta = 0;
+  if(ieta < 0)
+    iEta = ieta + 28;
+  else if(ieta > 0)
+    iEta = ieta + 27;
+  return iEta;
+};
 
 //
 // class declaration
@@ -181,6 +231,14 @@ private:
   std::vector<int> nSubJets, nBHadrons, HFlav;
   std::vector<std::vector<int>> subJetHFlav;
   std::vector<float> tau1, tau2, tau3;
+
+  std::vector<TLorentzVector> *allRegions  = new std::vector<TLorentzVector>;
+  std::vector<TLorentzVector> *allEcalTPGs  = new std::vector<TLorentzVector>;
+  std::vector<TLorentzVector> *allHcalTPGs  = new std::vector<TLorentzVector>;
+  std::vector<TLorentzVector> *caloClusters  = new std::vector<TLorentzVector>;
+  std::vector<TLorentzVector> *l1Jets  = new std::vector<TLorentzVector>;
+  std::vector<TLorentzVector> *ak8Jets  = new std::vector<TLorentzVector>;
+  std::vector<TLorentzVector> *subJets  = new std::vector<TLorentzVector>;
 
   int nGenJets, nRecoJets, nL1Jets;
   int l1Matched_1, l1Matched_2;
@@ -313,6 +371,13 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   std::vector<pat::Jet> goodJets;
   std::vector<pat::Jet> goodJetsAK8;
 
+  allRegions->clear();
+  allEcalTPGs->clear();
+  allHcalTPGs->clear();
+  caloClusters->clear();
+  l1Jets->clear();
+  ak8Jets->clear();
+  subJets->clear();
 
   // Start Running Layer 1
   edm::Handle<EcalTrigPrimDigiCollection> ecalTPs;
@@ -350,6 +415,13 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
 	return;
       }
       expectedTotalET += et;
+      int ieta = TPGEtaRange(caloEta);
+      short zside = ecalTp.id().zside();
+      float eta = getRecoEta(ieta, zside);
+      float phi = getRecoPhi(caloPhi);
+      TLorentzVector temp;
+      temp.SetPtEtaPhiE(et,eta,phi,et);
+      allEcalTPGs->push_back(temp);
     }
   }
 
@@ -376,10 +448,16 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
 	  if(!layer1->setHCALData(t, featureBits, et)) {
 	    std::cerr << "caloEta = " << caloEta << "; caloPhi =" << caloPhi << std::endl;
 	    std::cerr << "UCT: Failed loading an HCAL tower" << std::endl;
-	    return;
-	    
+	    return; 
 	  }
 	  expectedTotalET += et;
+          int ieta = TPGEtaRange(caloEta);
+          short zside = hcalTp.id().zside();
+          float eta = getRecoEta(ieta, zside);
+          float phi = getRecoPhi(caloPhi);
+          TLorentzVector temp;
+          temp.SetPtEtaPhiE(et,eta,phi,et);
+          allHcalTPGs->push_back(temp);
 	}
       }
       else {
@@ -442,10 +520,36 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
 	if(negativeEta && region == 11) rEta = 30;
 	if(negativeEta && region == 12) rEta = 31;
 	if(!negativeEta) rEta = 11 + region; // Positive eta portion is offset by 11
-	rgnCollection->push_back(L1CaloRegion((uint16_t) regionData, (unsigned) rEta, (unsigned) rPhi, (int16_t) 0));
+	rgnCollection->push_back(L1CaloRegion((uint16_t) regionData, (unsigned) rEta, (unsigned) rPhi, (int16_t) 0));   
       }
     }
   }  
+
+  for(vector<L1CaloRegion>::const_iterator testRegion = rgnCollection->begin(); testRegion != rgnCollection->end(); ++testRegion){
+    uint16_t test_raw = testRegion->raw();
+    uint32_t test_et = testRegion->et();
+    uint32_t test_rEta = testRegion->id().ieta();
+    uint32_t test_rPhi = testRegion->id().iphi();
+    UCTRegionIndex test_rIndex = g.getUCTRegionIndexFromL1CaloRegion(test_rEta, test_rPhi);
+    UCTTowerIndex test_tIndex = g.getUCTTowerIndexFromL1CaloRegion(test_rIndex, test_raw);
+    int test_cEta = test_tIndex.first;
+    int test_cPhi = test_tIndex.second;
+    bool test_negativeEta = g.getNegativeSide(test_cEta);
+
+    if(testRegion->et()>0 && fabs(test_cEta)<28 && test_cPhi < 72){
+      float pt = test_et;
+      float eta = 0;
+      if(fabs(test_cEta)<28){
+        eta = towerEtaMap[(int)fabs(test_cEta)];
+        eta = eta*fabs(test_cEta)/test_cEta;
+      }
+      float phi = towerPhiMap[test_cPhi];
+      TLorentzVector temp ;
+      temp.SetPtEtaPhiE(pt,eta,phi,pt);
+      allRegions->push_back(temp);
+    }
+  }
+
   //evt.put(std::move(rgnCollection), "");
 
   if(!summaryCard->process()) {
@@ -566,7 +670,6 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       //get rid of the low pt stuff for analysis to save disk space
       if(jet.pt() > recoPt_ ) {
 	goodJets.push_back(jet);
-
       }
     }
   }
@@ -583,6 +686,9 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       //get rid of the cruft for analysis to save disk space
       if(jetAK8.pt() > recoPt_ ) {
 	goodJetsAK8.push_back(jetAK8);
+        TLorentzVector temp ;
+        temp.SetPtEtaPhiE(jetAK8.pt(),jetAK8.eta(),jetAK8.phi(),jetAK8.et());
+        ak8Jets->push_back(temp);
       }
     }
   }
@@ -602,6 +708,9 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       HFlav.clear();
       for(unsigned int isub=0; isub<((jet.subjets("SoftDropPuppi")).size()); isub++){
         HFlav.push_back(jet.subjets("SoftDropPuppi")[isub]->hadronFlavour());
+        TLorentzVector temp;
+        temp.SetPtEtaPhiE(jet.subjets("SoftDropPuppi")[isub]->pt(),jet.subjets("SoftDropPuppi")[isub]->eta(),jet.subjets("SoftDropPuppi")[isub]->phi(),jet.subjets("SoftDropPuppi")[isub]->et());
+        subJets->push_back(temp);
       }
       subJetHFlav.push_back(HFlav);
       nBHadrons.push_back(jet.jetFlavourInfo().getbHadrons().size());
@@ -645,6 +754,9 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       //const UCTObject test = *i;
     if(l1JetsSorted.size() > 0){
       for(auto jet : l1JetsSorted){
+        TLorentzVector temp;
+        temp.SetPtEtaPhiE(jet.pt(),jet.eta(),jet.phi(),jet.et());
+        l1Jets->push_back(temp);
         if(reco::deltaR(jet, recoJet_1)<0.4 && foundL1Jet_1 == 0 ){
           l1Jet_1 = jet;
           l1Pt_1  = jet.pt();
@@ -724,8 +836,8 @@ void BoostedJetStudies::print() {
 
 void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("run",     &run,     "run/I");
-    tree->Branch("lumi",    &lumi,     "lumi/I");
-    tree->Branch("event",   &event,    "event/I");
+    tree->Branch("lumi",    &lumi,    "lumi/I");
+    tree->Branch("event",   &event,   "event/I");
 
     tree->Branch("recoPt_1",      &recoPt_1,     "recoPt_1/D");
     tree->Branch("recoEta_1",     &recoEta_1,    "recoEta_1/D");
@@ -769,6 +881,14 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("nSubJets",      &nSubJets);
     tree->Branch("subJetHFlav",   &subJetHFlav);
     tree->Branch("nBHadrons",     &nBHadrons);
+
+    tree->Branch("allRegions", "vector<TLorentzVector>", &allRegions, 32000, 0);
+    tree->Branch("hcalTPGs", "vector<TLorentzVector>", &allHcalTPGs, 32000, 0);
+    tree->Branch("ecalTPGs", "vector<TLorentzVector>", &allEcalTPGs, 32000, 0);
+    tree->Branch("caloClusters", "vector<TLorentzVector>", &caloClusters, 32000, 0);
+    tree->Branch("l1Jets", "vector<TLorentzVector>", &l1Jets, 32000, 0);
+    tree->Branch("ak8Jets", "vector<TLorentzVector>", &ak8Jets, 32000, 0);
+    tree->Branch("subJets", "vector<TLorentzVector>", &subJets, 32000, 0);
   }
 
 

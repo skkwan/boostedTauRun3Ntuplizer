@@ -18,6 +18,7 @@
 #include "TEllipse.h"
 #include "TPaveText.h"
 #include "TLine.h"
+#include "TEllipse.h"
 #include <sstream>
 //#include "Math/VectorUtil_Cint.h"
 
@@ -88,16 +89,20 @@ void DrawTowerLines(){
   }
 }
 
-void plotVector(int iEvent){
+void plotVector(int iEvent, const char* file){
   gStyle->SetOptStat(0);
-  TFile *f = TFile::Open("l1TDisplayEvent.root","READ");
+  const char* tfile = file;
+  TFile *f = TFile::Open(tfile,"READ");
   if (!f) { return; }
 
-  TTree *t = (TTree*) f->Get("l1NtupleProducer/EfficiencyTree");
+  TTree *t = (TTree*) f->Get("l1NtupleProducer/efficiencyTree");
   std::vector<TLorentzVector> *vpx             = 0;
   std::vector<TLorentzVector> *vEcalTpgs       = 0;
   std::vector<TLorentzVector> *vHcalTpgs       = 0;
   std::vector<TLorentzVector> *vCaloClusters   = 0;
+  std::vector<TLorentzVector> *vL1Jets         = 0;
+  std::vector<TLorentzVector> *vAK8Jets        = 0;
+  std::vector<TLorentzVector> *vSubJets        = 0;
   int event =0;
 
   // Create a new canvas.
@@ -108,17 +113,23 @@ void plotVector(int iEvent){
   c1->GetFrame()->SetBorderMode(-1);
 
   const Int_t kUPDATE = 1000;
+  TBranch *bEvent = 0;
   TBranch *bvpx = 0;
   TBranch *bEcalTpgs = 0;
   TBranch *bHcalTpgs = 0;
   TBranch *bCaloClusters = 0;
-  TBranch *bEvent = 0;    
+  TBranch *bL1Jets = 0;
+  TBranch *bAK8Jets = 0;
+  TBranch *bSubJets = 0;
 
   t->SetBranchAddress("event",&event,&bEvent);
   t->SetBranchAddress("allRegions",&vpx,&bvpx);
   t->SetBranchAddress("ecalTPGs",&vEcalTpgs,&bEcalTpgs);
   t->SetBranchAddress("hcalTPGs",&vHcalTpgs,&bHcalTpgs);
   t->SetBranchAddress("caloClusters",&vCaloClusters,&bCaloClusters);
+  t->SetBranchAddress("l1Jets",&vL1Jets,&bL1Jets);
+  t->SetBranchAddress("ak8Jets",&vAK8Jets,&bAK8Jets);
+  t->SetBranchAddress("subJets",&vSubJets,&bSubJets);
 
   // Create one histograms
   TH1F *h                = new TH1F("h","This is the eta distribution",100,-4,4);
@@ -126,6 +137,9 @@ void plotVector(int iEvent){
   TH2F *h2EcalTpgs       = new TH2F("h2EcalTpgs","h2 title",68,-3,3,72,-3.142,3.142);
   TH2F *h2HcalTpgs       = new TH2F("h2HcalTpgs","h2 title",68,-3,3,72,-3.142,3.142);
   TH2F *h2CaloClusters   = new TH2F("h2CaloClusters","h2 title",68,-3,3,72,-3.142,3.142);
+  TH2F *h2L1Jets         = new TH2F("h2L1Jets","h2 title",68,-3,3,72,-3.142,3.142);
+  TH2F *h2AK8Jets        = new TH2F("h2AK8Jets","h2 title",68,-3,3,72,-3.142,3.142);
+  TH2F *h2SubJets        = new TH2F("h2SubJets","h2 title",68,-3,3,72,-3.142,3.142);
 
   std::vector<TPaveText*> ecalTpgText;
   std::vector<TPaveText*> hcalTpgText;
@@ -140,6 +154,9 @@ void plotVector(int iEvent){
   bEcalTpgs->GetEntry(tentry);
   bHcalTpgs->GetEntry(tentry);
   bCaloClusters->GetEntry(tentry);
+  bL1Jets->GetEntry(tentry);
+  bAK8Jets->GetEntry(tentry);
+  bSubJets->GetEntry(tentry);
 
   //get the event number
   char name[30];
@@ -241,7 +258,28 @@ void plotVector(int iEvent){
       tempText->SetTextColor(kBlue);
       caloClusterText.push_back(tempText);
     }
-  }   
+  }
+
+  for (UInt_t j = 0; j < vL1Jets->size(); ++j) {
+    double eta = vL1Jets->at(j).Eta();
+    double phi = vL1Jets->at(j).Phi();
+    double pt  = vL1Jets->at(j).Pt();
+    h2L1Jets->Fill(eta, phi, pt);
+  }  
+
+  for (UInt_t j = 0; j < vAK8Jets->size(); ++j) {
+    double eta = vAK8Jets->at(j).Eta();
+    double phi = vAK8Jets->at(j).Phi();
+    double pt  = vAK8Jets->at(j).Pt();
+    h2AK8Jets->Fill(eta, phi, pt);
+  }
+
+  for (UInt_t j = 0; j < vSubJets->size(); ++j) {
+    double eta = vSubJets->at(j).Eta();
+    double phi = vSubJets->at(j).Phi();
+    double pt  = vSubJets->at(j).Pt();
+    h2SubJets->Fill(eta, phi, pt);
+  } 
 
   h2->GetXaxis()->SetAxisColor(17);
   h2->GetYaxis()->SetAxisColor(17);
@@ -258,6 +296,25 @@ void plotVector(int iEvent){
   h2CaloClusters->SetFillStyle(3144);
   h2CaloClusters->SetFillColorAlpha(kOrange, 0.75);
   h2CaloClusters->Draw("SAME BOX");
+  h2L1Jets->SetFillStyle(3001);
+  h2L1Jets->SetFillColorAlpha(kSpring, 0.75);
+  h2L1Jets->Draw("SAME BOX");
+  h2AK8Jets->SetFillStyle(3001);
+  h2AK8Jets->SetFillColorAlpha(kViolet+2, 0.75);
+  h2AK8Jets->Draw("SAME BOX");
+  h2SubJets->SetFillStyle(3001);
+  h2SubJets->SetFillColorAlpha(kAzure+10, 0.75);
+  h2SubJets->Draw("SAME BOX");
+
+  for (UInt_t j = 0; j < vAK8Jets->size(); ++j) {
+    double eta = vAK8Jets->at(j).Eta();
+    double phi = vAK8Jets->at(j).Phi();
+    TEllipse *circ = new TEllipse(eta,phi,.8,.8);
+    circ->SetFillStyle(0);
+    circ->SetLineStyle(2);
+    circ->SetLineColor(kViolet+2);
+    circ->Draw("SAME");
+  }
 
   float xR=0.8;
   TLegend *l = new TLegend(xR,0.8,xR+0.2,1.0);
@@ -265,6 +322,9 @@ void plotVector(int iEvent){
   l->AddEntry(h2EcalTpgs,"ECAL TPGs","F");
   l->AddEntry(h2HcalTpgs,"HCAL TPGs","F");
   l->AddEntry(h2CaloClusters,"caloClusters","F");
+  l->AddEntry(h2L1Jets,"L1 jets","F");
+  l->AddEntry(h2AK8Jets,"AK8 jets","F");
+  l->AddEntry(h2SubJets,"Sub jets","F");
   l->Draw();
   h2->GetXaxis()->SetTitle("eta");
   h2->GetYaxis()->SetTitle("phi");
@@ -282,7 +342,7 @@ void plotVector(int iEvent){
   }
 
   char saveFile[100];
-  sprintf(saveFile,"/afs/cern.ch/work/p/pdas/www/Run3Ntuplizer/EventDisplays/Event-%u.png",event);
+  sprintf(saveFile,"/afs/cern.ch/work/p/pdas/www/Run3Ntuplizer/EventDisplays/Event-%u-new.png",event);
   c1->SaveAs(saveFile);
   //delete h; delete h2; delete h2EcalTpgs; delete h2HcalTpgs; delete h2CaloClusters;
   //delete c1;
