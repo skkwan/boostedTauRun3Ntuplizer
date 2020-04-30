@@ -118,8 +118,61 @@ float getRecoEta(int ieta, short zside){
   return eta;
 };
 
+float getRecoEtaNew(int caloEta){
+  float eta = -999.;
+  static bool first = true;
+  static double twrEtaValues[42];
+  if(first) {
+    twrEtaValues[0] = 0;
+    for(unsigned int i = 0; i < 20; i++) {
+      twrEtaValues[i + 1] = 0.0436 + i * 0.0872;
+    }
+    twrEtaValues[21] = 1.785;
+    twrEtaValues[22] = 1.880;
+    twrEtaValues[23] = 1.9865;
+    twrEtaValues[24] = 2.1075;
+    twrEtaValues[25] = 2.247;
+    twrEtaValues[26] = 2.411;
+    twrEtaValues[27] = 2.575;
+    twrEtaValues[28] = 2.825;
+    twrEtaValues[29] = 999.;
+    twrEtaValues[30] = (3.15+2.98)/2.;
+    twrEtaValues[31] = (3.33+3.15)/2.;
+    twrEtaValues[32] = (3.50+3.33)/2.;
+    twrEtaValues[33] = (3.68+3.50)/2.;
+    twrEtaValues[34] = (3.68+3.85)/2.;
+    twrEtaValues[35] = (3.85+4.03)/2.;
+    twrEtaValues[36] = (4.03+4.20)/2.;
+    twrEtaValues[37] = (4.20+4.38)/2.;
+    twrEtaValues[38] = (4.74+4.38*3)/4.;
+    twrEtaValues[39] = (4.38+4.74*3)/4.;
+    twrEtaValues[40] = (5.21+4.74*3)/4.;
+    twrEtaValues[41] = (4.74+5.21*3)/4.;
+    first = false;
+  }
+  uint32_t absCaloEta = abs(caloEta);
+  if(absCaloEta <= 41) {
+    if(caloEta < 0)
+      eta =  -twrEtaValues[absCaloEta];
+    else
+      eta = +twrEtaValues[absCaloEta];
+  }
+  return eta;
+};
+
 float getRecoPhi(int iphi){
   return towerPhiMap[iphi-1];
+};
+
+float getRecoPhiNew(int caloPhi){
+  float phi = -999.;
+  if(caloPhi > 72) phi = +999.;
+  uint32_t absCaloPhi = std::abs(caloPhi) - 1;
+  if(absCaloPhi < 36)
+    phi = (((double) absCaloPhi + 0.5) * 0.0872);
+  else
+    phi = (-(71.5 - (double) absCaloPhi) * 0.0872);
+  return phi;
 };
 
 int TPGEtaRange(int ieta){
@@ -224,11 +277,12 @@ private:
   double l1DeltaEta, l1DeltaPhi, l1DeltaR, l1Mass;
 
   int l1NthJet_1, l1NthJet_2;
+  int l1NTau_1, l1NTau_2;
   int recoNthJet_1, recoNthJet_2;
 
   double vbfBDT;
   double recoPt_;
-  std::vector<int> nSubJets, nBHadrons, HFlav;
+  std::vector<int> nSubJets, nBHadrons, HFlav, nTausInfo;
   std::vector<std::vector<int>> subJetHFlav;
   std::vector<float> tau1, tau2, tau3;
 
@@ -378,6 +432,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   l1Jets->clear();
   ak8Jets->clear();
   subJets->clear();
+  nTausInfo.clear();
 
   // Start Running Layer 1
   edm::Handle<EcalTrigPrimDigiCollection> ecalTPs;
@@ -416,9 +471,12 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       }
       expectedTotalET += et;
       int ieta = TPGEtaRange(caloEta);
-      short zside = ecalTp.id().zside();
-      float eta = getRecoEta(ieta, zside);
-      float phi = getRecoPhi(caloPhi);
+      int zside = ecalTp.id().zside();
+      //float eta = getRecoEta(ieta, zside);
+      float eta = getRecoEtaNew(caloEta);
+      std::cout<<"ECAL   "<<"eta: "<<eta<<std::endl;
+      //float phi = getRecoPhi(caloPhi);
+      float phi = getRecoPhiNew(caloPhi);
       TLorentzVector temp;
       temp.SetPtEtaPhiE(et,eta,phi,et);
       allEcalTPGs->push_back(temp);
@@ -452,9 +510,11 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
 	  }
 	  expectedTotalET += et;
           int ieta = TPGEtaRange(caloEta);
-          short zside = hcalTp.id().zside();
-          float eta = getRecoEta(ieta, zside);
-          float phi = getRecoPhi(caloPhi);
+          int zside = hcalTp.id().zside();
+          //float eta = getRecoEta(ieta, zside);
+          float eta = getRecoEtaNew(caloEta);
+          //float phi = getRecoPhi(caloPhi);
+          float phi = getRecoPhiNew(caloPhi);
           TLorentzVector temp;
           temp.SetPtEtaPhiE(et,eta,phi,et);
           allHcalTPGs->push_back(temp);
@@ -540,10 +600,12 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       float pt = test_et;
       float eta = 0;
       if(fabs(test_cEta)<28){
-        eta = towerEtaMap[(int)fabs(test_cEta)];
-        eta = eta*fabs(test_cEta)/test_cEta;
+        //eta = towerEtaMap[(int)fabs(test_cEta)];
+        //eta = eta*fabs(test_cEta)/test_cEta;
+        eta = getRecoEtaNew(test_cEta);
       }
-      float phi = towerPhiMap[test_cPhi];
+      //float phi = towerPhiMap[test_cPhi];
+      float phi = getRecoPhiNew(test_cPhi);
       TLorentzVector temp ;
       temp.SetPtEtaPhiE(pt,eta,phi,pt);
       allRegions->push_back(temp);
@@ -622,6 +684,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     eta = g.getUCTTowerEta(object->iEta());
     phi = g.getUCTTowerPhi(object->iPhi());
     bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));// using kCentral for now, need a new type
+    nTausInfo.push_back(object->nTaus());
   }
 
   /*
@@ -763,6 +826,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
           l1Eta_1 = jet.eta();
           l1Phi_1 = jet.phi();
           l1NthJet_1 = i;
+          l1NTau_1 = nTausInfo[i];
           foundL1Jet_1 = 1;
         }
         if(l1JetsSorted.size() > 1){
@@ -772,6 +836,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
             l1Eta_2 = jet.eta();
             l1Phi_2 = jet.phi();
             l1NthJet_2 = i;
+            l1NTau_2 = nTausInfo[i];
             foundL1Jet_2 = 1;
           }
         }
@@ -797,12 +862,13 @@ void BoostedJetStudies::zeroOutAllVariables(){
   recoDeltaEta=-99; recoDeltaPhi=-99; recoDeltaR=-99; recoMass=-99;
   l1DeltaEta=-99; l1DeltaPhi=-99; l1DeltaR=-99; l1Mass=-99;
   l1NthJet_1=-99; l1NthJet_2=-99;
+  l1NTau_1=-99; l1NTau_2=-99;
   recoNthJet_1=-99; recoNthJet_2=-99;
   vbfBDT=-99; recoPt_=-99;
   nGenJets=-99; nRecoJets=-99; nL1Jets=-99;
   l1Matched_1=-99; l1Matched_2=-99;
  
-  nSubJets.clear(); nBHadrons.clear(); subJetHFlav.clear(); 
+  nSubJets.clear(); nBHadrons.clear(); subJetHFlav.clear();
   tau1.clear(); tau2.clear(); tau3.clear();
 }
 
@@ -858,11 +924,13 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("l1Eta_1",       &l1Eta_1,      "l1Eta_1/D");
     tree->Branch("l1Phi_1",       &l1Phi_1,      "l1Phi_1/D");
     tree->Branch("l1NthJet_1",    &l1NthJet_1,   "l1NthJet_1/I");
+    tree->Branch("l1NTau_1",      &l1NTau_1,     "l1NTau_1/I");
 
     tree->Branch("l1Pt_2",        &l1Pt_2,       "l1Pt_2/D"); 
     tree->Branch("l1Eta_2",       &l1Eta_2,      "l1Eta_2/D");
     tree->Branch("l1Phi_2",       &l1Phi_2,      "l1Phi_2/D");
     tree->Branch("l1NthJet_2",    &l1NthJet_2,   "l1NthJet_2/I");
+    tree->Branch("l1NTau_2",      &l1NTau_2,     "l1NTau_2/I");
 
     tree->Branch("l1DeltaEta",    &l1DeltaEta,   "l1DeltaEta/D");
     tree->Branch("l1DeltaPhi",    &l1DeltaPhi,   "l1DeltaPhi/D");
