@@ -64,9 +64,10 @@ process.load('L1Trigger.L1TCaloSummary.uct2016EmulatorDigis_cfi')
 process.load("L1Trigger.Run3Ntuplizer.l1BoostedJetStudies_cfi")
 
 #process.l1NtupleProducer.isData = cms.bool(False)
-process.l1NtupleProducer.ecalToken = cms.InputTag("ecalDigis","EcalTriggerPrimitives","L1TCaloSummaryTest")
-#process.l1NtupleProducer.ecalToken = cms.InputTag("ecalDigis")
-process.l1NtupleProducer.hcalToken = cms.InputTag("hcalDigis")
+#process.l1NtupleProducer.ecalToken = cms.InputTag("ecalDigis","EcalTriggerPrimitives","L1TCaloSummaryTest")
+process.l1NtupleProducer.ecalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
+#process.l1NtupleProducer.hcalToken = cms.InputTag("hcalDigis")
+process.l1NtupleProducer.hcalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)
@@ -94,6 +95,7 @@ process.source = cms.Source("PoolSource",
 )
 
 process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:734","1:961","1:966","1:982","1:966")
+process.source.eventsToProcess = cms.untracked.VEventRange("1:960007")
 
 process.options = cms.untracked.PSet(
 

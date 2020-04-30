@@ -474,7 +474,6 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       int zside = ecalTp.id().zside();
       //float eta = getRecoEta(ieta, zside);
       float eta = getRecoEtaNew(caloEta);
-      std::cout<<"ECAL   "<<"eta: "<<eta<<std::endl;
       //float phi = getRecoPhi(caloPhi);
       float phi = getRecoPhiNew(caloPhi);
       TLorentzVector temp;
