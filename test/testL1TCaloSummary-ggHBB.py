@@ -68,6 +68,7 @@ process.load("L1Trigger.Run3Ntuplizer.l1BoostedJetStudies_cfi")
 process.l1NtupleProducer.ecalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
 #process.l1NtupleProducer.hcalToken = cms.InputTag("hcalDigis")
 process.l1NtupleProducer.hcalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
+#process.l1NtupleProducer.activityFraction = cms.double(0.9)
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)
@@ -83,9 +84,11 @@ process.source = cms.Source("PoolSource",
                             #fileNames = cms.untracked.vstring(inputFiles)#,
                             #secondaryFileNames = cms.untracked.vstring(secondaryMap[options.inputFiles[0]])
                             fileNames = cms.untracked.vstring(
+#				'file:/hdfs/store/user/ojalvo/BoostedGHBB-Events/pickevents-mini.root'
 				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18MiniAOD/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/MINIAODSIM/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/1B0FC5E0-ACF7-0C49-8262-1F95F23C896B.root'
 ),
                             secondaryFileNames = cms.untracked.vstring(
+#				'file:/hdfs/store/user/ojalvo/BoostedGHBB-Events/pickevents-raw.root',
 				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/4187DAD9-3092-E448-9F4E-6B3616479547.root',
 				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/2FE6F8A3-9F3C-E14B-8F5F-F45BBE34AA30.root',
 				'root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18DR/SUSYGluGluToBBHToBB_NarrowWidth_M-1200_TuneCP5_13TeV-pythia8/GEN-SIM-RAW/FlatPU28to62NZS_102X_upgrade2018_realistic_v15-v1/110000/44D65997-B07E-8143-8B7D-B15A04DDC388.root',
@@ -94,8 +97,8 @@ process.source = cms.Source("PoolSource",
                             )
 )
 
-process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:734","1:961","1:966","1:982","1:966")
-process.source.eventsToProcess = cms.untracked.VEventRange("1:960007")
+process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:734","1:961","1:966","1:982")
+#process.source.eventsToProcess = cms.untracked.VEventRange("1:960303")
 
 process.options = cms.untracked.PSet(
 
