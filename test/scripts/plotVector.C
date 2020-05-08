@@ -30,7 +30,6 @@
 #pragma link C++ class vector<TLorentzVector>+;
 #endif
 
-
 void DrawRegionLines(){
   std::vector<TLine*> regionLines;
   float etaValues[17] = { -3, -2.088, -1.74, -1.392, -1.044, -0.696, -0.348, 0,
@@ -89,10 +88,12 @@ void DrawTowerLines(){
   }
 }
 
-void plotVector(int iEvent, const char* file){
+//void plotVector(int iEvent, const char* file){
+void plotVector(int iEvent){
   gStyle->SetOptStat(0);
-  const char* tfile = file;
-  TFile *f = TFile::Open(tfile,"READ");
+  //const char* tfile = file;
+  //TFile *f = TFile::Open(tfile,"READ");
+  TFile *f = TFile::Open("l1TNtuple-ggHBB.root","READ");
   if (!f) { return; }
 
   TTree *t = (TTree*) f->Get("l1NtupleProducer/efficiencyTree");
@@ -174,16 +175,10 @@ void plotVector(int iEvent, const char* file){
       h2->Fill(vpx->at(j).Eta(),vpx->at(j).Phi(),vpx->at(j).Pt());
       k++; 
       if(vpx->at(j).Pt()>10)
-	std::cout<<"region eta "<<vpx->at(j).Eta()<<" region phi "<<vpx->at(j).Phi()<< " pt "<<vpx->at(j).Pt()/2 <<" GeV"<<std::endl;
+        std::cout<<"region eta "<<vpx->at(j).Eta()<<" region phi "<<vpx->at(j).Phi()<< " pt "<<vpx->at(j).Pt()/2 <<" GeV"<<std::endl;
     }
   }
   std::cout<<"n Regions above pt 0 :"<<k<<std::endl;
-
-  //for (UInt_t j = 0; j < vpx->size(); ++j) {
-  //  if(ROOT::Math::VectorUtil::DeltaR(vRecoTaus->at(0), vpx->at(j))<0.2){
-  //    std::cout<<"Matched Reco pt: "<< vRecoTaus->at(0).Pt() <<" region pt: "<< vpx->at(j).Pt()/2 <<" GeV... resolution: "<<(vRecoTaus->at(0).Pt()-(vpx->at(j).Pt()/2))/vRecoTaus->at(0).Pt()<<std::endl;
-  //  }
-  //}
 
   for (UInt_t j = 0; j < vEcalTpgs->size(); ++j) {
     double eta = vEcalTpgs->at(j).Eta();
@@ -306,9 +301,12 @@ void plotVector(int iEvent, const char* file){
   h2SubJets->SetFillColorAlpha(kAzure+10, 0.75);
   h2SubJets->Draw("SAME BOX");
 
+  double x1=-99., x2=-99., x3=-99., x4=-99., y1=-99., y2=-99., y3=-99., y4=-99.;
   for (UInt_t j = 0; j < vAK8Jets->size(); ++j) {
     double eta = vAK8Jets->at(j).Eta();
     double phi = vAK8Jets->at(j).Phi();
+    if(j == 0) { x1 = eta-0.8; x2 = eta+0.8; y1 = phi-0.8; y2 = phi+0.8; }
+    if(j == 1) { x3 = eta-0.8; x4 = eta+0.8; y3 = phi-0.8; y4 = phi+0.8; }
     TEllipse *circ = new TEllipse(eta,phi,.8,.8);
     circ->SetFillStyle(0);
     circ->SetLineStyle(2);
@@ -342,8 +340,59 @@ void plotVector(int iEvent, const char* file){
   }
 
   char saveFile[100];
-  sprintf(saveFile,"/afs/cern.ch/work/p/pdas/www/Run3Ntuplizer/EventDisplays/Event-%u-new.png",event);
+  sprintf(saveFile,"/afs/cern.ch/work/p/pdas/www/Run3Ntuplizer/EventDisplays/Event-%u-test.png",event);
   c1->SaveAs(saveFile);
-  //delete h; delete h2; delete h2EcalTpgs; delete h2HcalTpgs; delete h2CaloClusters;
-  //delete c1;
+
+  if(x1 > -99.){
+    TCanvas *c2 = new TCanvas("c2","leading jet",200,10,700,700);
+    c2->SetFillColor(0);
+    c2->GetFrame()->SetFillColor(0);
+    c2->GetFrame()->SetBorderSize(6);
+    c2->GetFrame()->SetBorderMode(-1);
+    c2->cd();
+
+    h->Draw();
+    h2->GetXaxis()->SetRangeUser(x1,x2);
+    h2->GetYaxis()->SetRangeUser(y1,y2);
+    h2->Draw("BOX");
+    DrawRegionLines();
+    DrawTowerLines();
+    h2HcalTpgs->Draw("SAME BOX");
+    h2EcalTpgs->Draw("SAME BOX");
+    h2CaloClusters->Draw("SAME BOX");
+    h2L1Jets->Draw("SAME BOX");
+    h2AK8Jets->Draw("SAME BOX");
+    h2SubJets->Draw("SAME BOX");
+    l->Draw();
+    char saveFile1[100];
+    sprintf(saveFile1,"/afs/cern.ch/work/p/pdas/www/Run3Ntuplizer/EventDisplays/Event-%u-test-jet1.png",event);
+    c2->SaveAs(saveFile1);
+  }
+
+  if(x3 > -99.){
+    TCanvas *c3 = new TCanvas("c3","sub-leading jet",200,10,700,700);
+    c3->SetFillColor(0);
+    c3->GetFrame()->SetFillColor(0);
+    c3->GetFrame()->SetBorderSize(6);
+    c3->GetFrame()->SetBorderMode(-1);
+    c3->cd();
+
+    h->Draw();
+    h2->GetXaxis()->SetRangeUser(x3,x4);
+    h2->GetYaxis()->SetRangeUser(y3,y4);
+    h2->Draw("BOX");
+    DrawRegionLines();
+    DrawTowerLines();
+    h2HcalTpgs->Draw("SAME BOX");
+    h2EcalTpgs->Draw("SAME BOX");
+    h2CaloClusters->Draw("SAME BOX");
+    h2L1Jets->Draw("SAME BOX");
+    h2AK8Jets->Draw("SAME BOX");
+    h2SubJets->Draw("SAME BOX");
+    l->Draw();
+    char saveFile1[100];
+    sprintf(saveFile1,"/afs/cern.ch/work/p/pdas/www/Run3Ntuplizer/EventDisplays/Event-%u-test-jet2.png",event);
+    c3->SaveAs(saveFile1);
+  }
+
 }
