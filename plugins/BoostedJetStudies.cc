@@ -74,6 +74,8 @@
 
 
 #include "L1Trigger/L1TCaloLayer1/src/L1TCaloLayer1FetchLUTs.hh"
+#include <bitset>
+using std::bitset;
 
 #pragma extra_include "TLorentzVector.h";
 #pragma link C++ class std::vector<TLorentzVector>;
@@ -184,6 +186,27 @@ int TPGEtaRange(int ieta){
   return iEta;
 };
 
+bitset<12> mergedbits(bitset<12> bitsin){
+  bitset<12> one = (0x1);
+  bitset<12> finalbits = 0x0;
+  bitset<12> upper_mask = 0xFFE;
+  bitset<12> lower_mask = 0x0;
+  bitset<12> x = bitsin;
+  for(int j = 0; j < 11; j++){
+    if(bitsin[j+1] == bitsin[j]){
+      x = x & upper_mask;
+      x = x >> 1;
+      finalbits = (finalbits & lower_mask) | x;
+    }
+    else{
+      finalbits = (finalbits & lower_mask)| x ;
+      upper_mask = upper_mask << 1;
+      lower_mask = (lower_mask << 1) | one;
+    }
+  }
+  return finalbits;
+};
+
 //
 // class declaration
 //
@@ -282,7 +305,8 @@ private:
 
   double vbfBDT;
   double recoPt_;
-  std::vector<int> nSubJets, nBHadrons, HFlav, nTausInfo;
+  std::vector<int> nSubJets, nBHadrons, HFlav, nL1Taus;
+  std::vector<string> etaBits, phiBits, mEtaBits, mPhiBits;
   std::vector<std::vector<int>> subJetHFlav;
   std::vector<float> tau1, tau2, tau3;
 
@@ -432,7 +456,11 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   l1Jets->clear();
   ak8Jets->clear();
   subJets->clear();
-  nTausInfo.clear();
+  nL1Taus.clear();
+  etaBits.clear();
+  phiBits.clear();
+  mEtaBits.clear();
+  mPhiBits.clear();
 
   // Start Running Layer 1
   edm::Handle<EcalTrigPrimDigiCollection> ecalTPs;
@@ -623,6 +651,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   double phi = -999.;
   double mass = 0;
   double caloScaleFactor = 0.5;
+  bitset<12> goodPattern(string("000000001010"));
   /* Do not bother with all of these things...  
   std::list<UCTObject*> emObjs = summaryCard->getEMObjs();
   for(std::list<UCTObject*>::const_iterator i = emObjs.begin(); i != emObjs.end(); i++) {
@@ -676,14 +705,23 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     fJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kForward));
   }
 */
+
   std::list<UCTObject*> boostedJetObjs = summaryCard->getBoostedJetObjs();
   for(std::list<UCTObject*>::const_iterator i = boostedJetObjs.begin(); i != boostedJetObjs.end(); i++) {
     const UCTObject* object = *i;
     pt = ((double) object->et()) * caloScaleFactor;
     eta = g.getUCTTowerEta(object->iEta());
     phi = g.getUCTTowerPhi(object->iPhi());
-    bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));// using kCentral for now, need a new type
-    nTausInfo.push_back(object->nTaus());
+    bitset<12> eta_in = object->activeTowerEta(); bitset<12> phi_in = object->activeTowerPhi();
+    bitset<12> m_eta_in = mergedbits(eta_in); bitset<12> m_phi_in = mergedbits(phi_in);
+    if(m_eta_in == goodPattern || m_phi_in == goodPattern){
+      etaBits.push_back(eta_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+      phiBits.push_back(phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+      mEtaBits.push_back(m_eta_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+      mPhiBits.push_back(m_phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+      bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));//using kCentral for now, need a new type
+      nL1Taus.push_back(object->nTaus());
+    }
   }
 
   /*
@@ -747,10 +785,15 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       //recoJetAK8_phi->Fill( jetAK8.phi() );
       //get rid of the cruft for analysis to save disk space
       if(jetAK8.pt() > recoPt_ ) {
-	goodJetsAK8.push_back(jetAK8);
+        nSubJets.push_back(jetAK8.subjets("SoftDropPuppi").size());
+        nBHadrons.push_back(jetAK8.jetFlavourInfo().getbHadrons().size());
         TLorentzVector temp ;
         temp.SetPtEtaPhiE(jetAK8.pt(),jetAK8.eta(),jetAK8.phi(),jetAK8.et());
         ak8Jets->push_back(temp);
+        //if(jetAK8.subjets("SoftDropPuppi").size() > 1 && jetAK8.jetFlavourInfo().getbHadrons().size() == 2 && jetAK8.userFloat("NjettinessAK8Puppi:tau1") > jetAK8.userFloat("NjettinessAK8Puppi:tau2")){
+        if(jetAK8.subjets("SoftDropPuppi").size() ==  2 && jetAK8.jetFlavourInfo().getbHadrons().size() > 1){
+          goodJetsAK8.push_back(jetAK8);
+        }
       }
     }
   }
@@ -766,7 +809,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       tau1.push_back(jet.userFloat("NjettinessAK8Puppi:tau1"));
       tau2.push_back(jet.userFloat("NjettinessAK8Puppi:tau2"));
       tau3.push_back(jet.userFloat("NjettinessAK8Puppi:tau3"));
-      nSubJets.push_back(jet.subjets("SoftDropPuppi").size());
+      //nSubJets.push_back(jet.subjets("SoftDropPuppi").size());
       HFlav.clear();
       for(unsigned int isub=0; isub<((jet.subjets("SoftDropPuppi")).size()); isub++){
         HFlav.push_back(jet.subjets("SoftDropPuppi")[isub]->hadronFlavour());
@@ -775,7 +818,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
         subJets->push_back(temp);
       }
       subJetHFlav.push_back(HFlav);
-      nBHadrons.push_back(jet.jetFlavourInfo().getbHadrons().size());
+      //nBHadrons.push_back(jet.jetFlavourInfo().getbHadrons().size());
       std::cout<<"N subjets: "<< jet.subjets("SoftDropPuppi").size()<<std::endl;
       std::cout<<"N BHadrons: "<< jet.jetFlavourInfo().getbHadrons().size()<<std::endl;
       //take more variables from here: https://github.com/gouskos/HiggsToBBNtupleProducerTool/blob/opendata_80X/NtupleAK8/src/FatJetInfoFiller.cc#L215-L217
@@ -825,7 +868,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
           l1Eta_1 = jet.eta();
           l1Phi_1 = jet.phi();
           l1NthJet_1 = i;
-          l1NTau_1 = nTausInfo[i];
+          l1NTau_1 = nL1Taus[i];
           foundL1Jet_1 = 1;
         }
         if(l1JetsSorted.size() > 1){
@@ -835,7 +878,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
             l1Eta_2 = jet.eta();
             l1Phi_2 = jet.phi();
             l1NthJet_2 = i;
-            l1NTau_2 = nTausInfo[i];
+            l1NTau_2 = nL1Taus[i];
             foundL1Jet_2 = 1;
           }
         }
@@ -866,7 +909,6 @@ void BoostedJetStudies::zeroOutAllVariables(){
   vbfBDT=-99; recoPt_=-99;
   nGenJets=-99; nRecoJets=-99; nL1Jets=-99;
   l1Matched_1=-99; l1Matched_2=-99;
- 
   nSubJets.clear(); nBHadrons.clear(); subJetHFlav.clear();
   tau1.clear(); tau2.clear(); tau3.clear();
 }
@@ -948,6 +990,11 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("nSubJets",      &nSubJets);
     tree->Branch("subJetHFlav",   &subJetHFlav);
     tree->Branch("nBHadrons",     &nBHadrons);
+    tree->Branch("nL1Taus",       &nL1Taus);
+    tree->Branch("etaBits",       &etaBits);
+    tree->Branch("phiBits",       &phiBits);
+    tree->Branch("mEtaBits",      &mEtaBits);
+    tree->Branch("mPhiBits",      &mPhiBits);
 
     tree->Branch("allRegions", "vector<TLorentzVector>", &allRegions, 32000, 0);
     tree->Branch("hcalTPGs", "vector<TLorentzVector>", &allHcalTPGs, 32000, 0);
