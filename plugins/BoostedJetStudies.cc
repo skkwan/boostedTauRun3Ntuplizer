@@ -283,25 +283,13 @@ private:
   TTree* l1Tree;
   int run, lumi, event;
 
-  double genPt, genEta, genPhi;
-  double recoPt, recoEta, recoPhi;
-  double l1Pt, l1Eta, l1Phi;
-
   double genPt_1, genEta_1, genPhi_1;
   double recoPt_1, recoEta_1, recoPhi_1;
   double l1Pt_1, l1Eta_1, l1Phi_1;
   
-  double genPt_2, genEta_2, genPhi_2;
-  double recoPt_2, recoEta_2, recoPhi_2;
-  double l1Pt_2, l1Eta_2, l1Phi_2;
-
-  double genDeltaEta, genDeltaPhi, genDeltaR, genMass;
-  double recoDeltaEta, recoDeltaPhi, recoDeltaR, recoMass;
-  double l1DeltaEta, l1DeltaPhi, l1DeltaR, l1Mass;
-
-  int l1NthJet_1, l1NthJet_2;
-  int l1NTau_1, l1NTau_2;
-  int recoNthJet_1, recoNthJet_2;
+  int l1NthJet_1;
+  int l1NTau_1;
+  int recoNthJet_1;
 
   double vbfBDT;
   double recoPt_;
@@ -319,7 +307,7 @@ private:
   std::vector<TLorentzVector> *subJets  = new std::vector<TLorentzVector>;
 
   int nGenJets, nRecoJets, nL1Jets;
-  int l1Matched_1, l1Matched_2;
+  int l1Matched_1;
   void createBranches(TTree *tree);
   TTree* efficiencyTree;
   edm::Service<TFileService> tfs_;  
@@ -714,14 +702,14 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     phi = g.getUCTTowerPhi(object->iPhi());
     bitset<12> eta_in = object->activeTowerEta(); bitset<12> phi_in = object->activeTowerPhi();
     bitset<12> m_eta_in = mergedbits(eta_in); bitset<12> m_phi_in = mergedbits(phi_in);
-    if(m_eta_in == goodPattern || m_phi_in == goodPattern){
-      etaBits.push_back(eta_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
-      phiBits.push_back(phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
-      mEtaBits.push_back(m_eta_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
-      mPhiBits.push_back(m_phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
-      bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));//using kCentral for now, need a new type
-      nL1Taus.push_back(object->nTaus());
-    }
+    //if(m_eta_in == goodPattern || m_phi_in == goodPattern){
+    etaBits.push_back(eta_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    phiBits.push_back(phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    mEtaBits.push_back(m_eta_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    mPhiBits.push_back(m_phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));//using kCentral for now, need a new type
+    nL1Taus.push_back(object->nTaus());
+    //}
   }
 
   /*
@@ -832,29 +820,15 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     }
     if(l1JetsSorted.size() > 1){  std::sort(l1JetsSorted.begin(),l1JetsSorted.end(),compareByPt);}
     pat::Jet recoJet_1;
-    pat::Jet recoJet_2;
 
     recoPt_1  = goodJetsAK8.at(0).pt();
     recoEta_1 = goodJetsAK8.at(0).eta();
     recoPhi_1 = goodJetsAK8.at(0).phi();
     recoJet_1 = goodJetsAK8.at(0);
 
-    if(goodJetsAK8.size()>1){
-      recoJet_2 = goodJetsAK8.at(1);
-      recoPt_2  = goodJetsAK8.at(1).pt();
-      recoEta_2 = goodJetsAK8.at(1).eta();
-      recoPhi_2 = goodJetsAK8.at(1).phi();
-      recoDeltaEta = recoEta_1 - recoEta_2;
-      recoDeltaPhi = recoPhi_1 - recoPhi_2;
-      recoDeltaR = reco::deltaR(recoJet_1.p4(), recoJet_1.p4() );
-      recoMass = (recoJet_1.p4() + recoJet_2.p4()).mass();
-    }
-
     int i = 0;
     int foundL1Jet_1 = 0;
-    int foundL1Jet_2 = 0;
     l1extra::L1JetParticle l1Jet_1;
-    l1extra::L1JetParticle l1Jet_2;
     //for(std::list<UCTObject*>::const_iterator i = boostedJetObjs.begin(); i != boostedJetObjs.end(); i++) {
       //const UCTObject test = *i;
     if(l1JetsSorted.size() > 0){
@@ -871,17 +845,6 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
           l1NTau_1 = nL1Taus[i];
           foundL1Jet_1 = 1;
         }
-        if(l1JetsSorted.size() > 1){
-          if(recoPt_2 > 0 && reco::deltaR(jet, recoJet_2)<0.4 && foundL1Jet_2 == 0 ){
-            l1Jet_2 = jet;
-            l1Pt_2  = jet.pt();
-            l1Eta_2 = jet.eta();
-            l1Phi_2 = jet.phi();
-            l1NthJet_2 = i;
-            l1NTau_2 = nL1Taus[i];
-            foundL1Jet_2 = 1;
-          }
-        }
         i++;
       }
     }
@@ -891,24 +854,15 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
 }
 
 void BoostedJetStudies::zeroOutAllVariables(){
-  genPt=-99; genEta=-99; genPhi=-99;
-  recoPt=-99; recoEta=-99; recoPhi=-99;
-  l1Pt=-99; l1Eta=-99; l1Phi=-99;
   genPt_1=-99; genEta_1=-99; genPhi_1=-99;
   recoPt_1=-99; recoEta_1=-99; recoPhi_1=-99;
   l1Pt_1=-99; l1Eta_1=-99; l1Phi_1=-99;
-  genPt_2=-99; genEta_2=-99; genPhi_2=-99;
-  recoPt_2=-99; recoEta_2=-99; recoPhi_2=-99;
-  l1Pt_2=-99; l1Eta_2=-99; l1Phi_2=-99;
-  genDeltaEta=-99; genDeltaPhi=-99; genDeltaR=-99; genMass=-99;
-  recoDeltaEta=-99; recoDeltaPhi=-99; recoDeltaR=-99; recoMass=-99;
-  l1DeltaEta=-99; l1DeltaPhi=-99; l1DeltaR=-99; l1Mass=-99;
-  l1NthJet_1=-99; l1NthJet_2=-99;
-  l1NTau_1=-99; l1NTau_2=-99;
-  recoNthJet_1=-99; recoNthJet_2=-99;
+  l1NthJet_1=-99; 
+  l1NTau_1=-99; 
+  recoNthJet_1=-99; 
   vbfBDT=-99; recoPt_=-99;
   nGenJets=-99; nRecoJets=-99; nL1Jets=-99;
-  l1Matched_1=-99; l1Matched_2=-99;
+  l1Matched_1=-99;
   nSubJets.clear(); nBHadrons.clear(); subJetHFlav.clear();
   tau1.clear(); tau2.clear(); tau3.clear();
 }
@@ -950,16 +904,6 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("recoEta_1",     &recoEta_1,    "recoEta_1/D");
     tree->Branch("recoPhi_1",     &recoPhi_1,    "recoPhi_1/D");
     tree->Branch("recoNthJet_1",  &recoNthJet_1, "recoNthJet_1/I");
-
-    tree->Branch("recoPt_2",      &recoPt_2,      "recoPt_2/D");
-    tree->Branch("recoEta_2",     &recoEta_2,     "recoEta_2/D");
-    tree->Branch("recoPhi_2",     &recoPhi_2,     "recoPhi_2/D");
-    tree->Branch("recoNthJet_2",  &recoNthJet_2,  "recoNthJet_2/I");
-
-    tree->Branch("recoDeltaEta",  &recoDeltaEta, "recoDeltaEta/D");
-    tree->Branch("recoDeltaPhi",  &recoDeltaPhi, "recoDeltaPhi/D");
-    tree->Branch("recoDeltaR",    &recoDeltaR,   "recoDeltaR/D");
-    tree->Branch("recoMass",      &recoMass,     "recoMass/D");
       
     tree->Branch("l1Pt_1",        &l1Pt_1,       "l1Pt_1/D"); 
     tree->Branch("l1Eta_1",       &l1Eta_1,      "l1Eta_1/D");
@@ -967,19 +911,7 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("l1NthJet_1",    &l1NthJet_1,   "l1NthJet_1/I");
     tree->Branch("l1NTau_1",      &l1NTau_1,     "l1NTau_1/I");
 
-    tree->Branch("l1Pt_2",        &l1Pt_2,       "l1Pt_2/D"); 
-    tree->Branch("l1Eta_2",       &l1Eta_2,      "l1Eta_2/D");
-    tree->Branch("l1Phi_2",       &l1Phi_2,      "l1Phi_2/D");
-    tree->Branch("l1NthJet_2",    &l1NthJet_2,   "l1NthJet_2/I");
-    tree->Branch("l1NTau_2",      &l1NTau_2,     "l1NTau_2/I");
-
-    tree->Branch("l1DeltaEta",    &l1DeltaEta,   "l1DeltaEta/D");
-    tree->Branch("l1DeltaPhi",    &l1DeltaPhi,   "l1DeltaPhi/D");
-    tree->Branch("l1DeltaR",      &l1DeltaR,     "l1DeltaR/D");
-    tree->Branch("l1Mass",        &l1Mass,       "l1Mass/D");
-
     tree->Branch("l1Matched_1",   &l1Matched_1, "l1Matched_1/I");
-    tree->Branch("l1Matched_2",   &l1Matched_2, "l1Matched_2/I");
     tree->Branch("nRecoJets",     &nRecoJets,    "nRecoJets/I");
     tree->Branch("nL1Jets",       &nL1Jets,      "nL1Jets/I");
     tree->Branch("vbfBDT",        &vbfBDT,       "vbfBDT/D");
