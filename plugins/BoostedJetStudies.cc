@@ -700,6 +700,9 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     pt = ((double) object->et()) * caloScaleFactor;
     eta = g.getUCTTowerEta(object->iEta());
     phi = g.getUCTTowerPhi(object->iPhi());
+    TLorentzVector temp;
+    temp.SetPtEtaPhiE(pt,eta,phi,pt);
+    l1Jets->push_back(temp);
     bitset<12> eta_in = object->activeTowerEta(); bitset<12> phi_in = object->activeTowerPhi();
     bitset<12> m_eta_in = mergedbits(eta_in); bitset<12> m_phi_in = mergedbits(phi_in);
     //if(m_eta_in == goodPattern || m_phi_in == goodPattern){
@@ -819,6 +822,14 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       l1JetsSorted.push_back(*l1Jet);
     }
     if(l1JetsSorted.size() > 1){  std::sort(l1JetsSorted.begin(),l1JetsSorted.end(),compareByPt);}
+    //create mapping between the sorted and unsorted collections
+    int m[l1JetsSorted.size()]; 
+    for (size_t i = 0; i < l1JetsSorted.size(); i++){ 
+      for (size_t j = 0; j < bJetCands->size(); j++){
+        if(l1JetsSorted.at(i).pt() == bJetCands->at(j).pt()) m[i] = j;
+      }
+    }
+
     pat::Jet recoJet_1;
 
     recoPt_1  = goodJetsAK8.at(0).pt();
@@ -829,20 +840,16 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     int i = 0;
     int foundL1Jet_1 = 0;
     l1extra::L1JetParticle l1Jet_1;
-    //for(std::list<UCTObject*>::const_iterator i = boostedJetObjs.begin(); i != boostedJetObjs.end(); i++) {
-      //const UCTObject test = *i;
     if(l1JetsSorted.size() > 0){
       for(auto jet : l1JetsSorted){
-        TLorentzVector temp;
-        temp.SetPtEtaPhiE(jet.pt(),jet.eta(),jet.phi(),jet.et());
-        l1Jets->push_back(temp);
         if(reco::deltaR(jet, recoJet_1)<0.4 && foundL1Jet_1 == 0 ){
           l1Jet_1 = jet;
           l1Pt_1  = jet.pt();
           l1Eta_1 = jet.eta();
           l1Phi_1 = jet.phi();
           l1NthJet_1 = i;
-          l1NTau_1 = nL1Taus[i];
+          l1NTau_1 = nL1Taus[m[i]];
+          l1Matched_1 = m[i];
           foundL1Jet_1 = 1;
         }
         i++;
