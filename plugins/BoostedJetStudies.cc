@@ -713,11 +713,37 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));//using kCentral for now, need a new type
     nL1Taus.push_back(object->nTaus());
     std::cout<<"printing the tower ET:"<<std::endl;
+    bool activeTower[12][12];
+    uint32_t activityLevel = object->et()*0.125;
     for(uint32_t iPhi = 0; iPhi < 12; iPhi++){
-      for(uint32_t iEta = 0; iEta < 12; iEta++) {
-        std::cout<< object->boostedJetTowers()[iEta+iPhi*12]<<setw(20)<<" ";
+      for(uint32_t iEta = 0; iEta < 12; iEta++){
+        std::cout<< object->boostedJetTowers()[iEta*12+iPhi]<<setw(20)<<" "; 
+        uint32_t towerET = object->boostedJetTowers()[iEta+iPhi*12];
+        if(towerET > activityLevel) {
+          activeTower[iEta][iPhi] = true;
+        }
+        else activeTower[iEta][iPhi] = false;
       }
     }
+    bitset<12> activeTowerEtaPattern = 0;
+    for(uint32_t iEta = 0; iEta < 12; iEta++){
+      bool activeStrip = false;
+      for(uint32_t iPhi = 0; iPhi < 12; iPhi++){
+        if(activeTower[iEta][iPhi]) activeStrip = true;
+      }
+      if(activeStrip) activeTowerEtaPattern |= (0x1 << iEta);
+    }
+    bitset<12> activeTowerPhiPattern = 0;
+    for(uint32_t iPhi = 0; iPhi < 12; iPhi++){
+      bool activeStrip = false;
+      for(uint32_t iEta = 0; iEta < 12; iEta++){
+        if(activeTower[iEta][iPhi]) activeStrip = true;
+      }
+      if(activeStrip) activeTowerPhiPattern |= (0x1 << iPhi);
+    }
+    std::cout<<"\n";
+    std::cout<<"patterns: "<<activeTowerEtaPattern.to_string()<<"\t"<<eta_in.to_string()<<"\t"<<m_eta_in.to_string()<<std::endl;
+    std::cout<<"patterns: "<<activeTowerPhiPattern.to_string()<<"\t"<<phi_in.to_string()<<"\t"<<m_phi_in.to_string()<<std::endl;
     //}
   }
 
