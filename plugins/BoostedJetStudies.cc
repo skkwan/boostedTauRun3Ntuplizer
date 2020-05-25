@@ -712,13 +712,13 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     mPhiBits.push_back(m_phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
     bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));//using kCentral for now, need a new type
     nL1Taus.push_back(object->nTaus());
-    std::cout<<"printing the tower ET:"<<std::endl;
+    //std::cout<<"printing the tower ET:"<<std::endl;
     bool activeTower[12][12];
-    uint32_t activityLevel = object->et()*0.125;
+    uint32_t activityLevel = object->et()*0.0625;
     for(uint32_t iPhi = 0; iPhi < 12; iPhi++){
       for(uint32_t iEta = 0; iEta < 12; iEta++){
-        std::cout<< object->boostedJetTowers()[iEta*12+iPhi]<<setw(20)<<" "; 
-        uint32_t towerET = object->boostedJetTowers()[iEta+iPhi*12];
+        //std::cout<< object->boostedJetTowers()[iEta*12+iPhi]<<setw(20)<<" "; 
+        uint32_t towerET = object->boostedJetTowers()[iEta*12+iPhi];
         if(towerET > activityLevel) {
           activeTower[iEta][iPhi] = true;
         }
