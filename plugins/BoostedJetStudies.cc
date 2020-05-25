@@ -266,6 +266,7 @@ private:
   double eGammaIsolationFactor;
 
   bool verbose;
+  double activityFraction12;
 
   UCTParameters uctParameters;
   UCTLayer1 *layer1;
@@ -352,7 +353,8 @@ BoostedJetStudies::BoostedJetStudies(const edm::ParameterSet& iConfig) :
 		iConfig.getParameter<double>("miscActivityFraction")),
   jetSrc_(    consumes<vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("recoJets"))),
   jetSrcAK8_( consumes<vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("recoJetsAK8"))),
-  genSrc_((        iConfig.getParameter<edm::InputTag>( "genParticles")))
+  genSrc_((        iConfig.getParameter<edm::InputTag>( "genParticles"))),
+  activityFraction12(iConfig.getParameter<double>("activityFraction12"))
 {
   std::vector<double> pumLUTData;
   char pumLUTString[10];
@@ -714,7 +716,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     nL1Taus.push_back(object->nTaus());
     //std::cout<<"printing the tower ET:"<<std::endl;
     bool activeTower[12][12];
-    uint32_t activityLevel = object->et()*0.0625;
+    uint32_t activityLevel = object->et()*activityFraction12;
     for(uint32_t iPhi = 0; iPhi < 12; iPhi++){
       for(uint32_t iEta = 0; iEta < 12; iEta++){
         //std::cout<< object->boostedJetTowers()[iEta*12+iPhi]<<setw(20)<<" "; 

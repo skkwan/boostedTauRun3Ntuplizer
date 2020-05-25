@@ -58,6 +58,6 @@ pumLUT17p=  cms.vdouble(3.28, 2.64, 2.26, 2.23, 1.97, 1.89, 7.61, 2.27, 2.33, 2.
                                       activityFraction = cms.double(0.125),
                                       ecalActivityFraction = cms.double(0.25),
                                       miscActivityFraction = cms.double(0.25),
-                                      verbose = cms.bool(False)
-
+                                      verbose = cms.bool(False),
+                                      activityFraction12 = cms.double(0.0625)
 )
