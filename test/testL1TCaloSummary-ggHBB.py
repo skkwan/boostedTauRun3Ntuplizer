@@ -69,7 +69,7 @@ process.l1NtupleProducer.ecalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCa
 #process.l1NtupleProducer.hcalToken = cms.InputTag("hcalDigis")
 process.l1NtupleProducer.hcalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
 #process.l1NtupleProducer.activityFraction = cms.double(0.9)
-process.l1NtupleProducer.activityFraction12 = cms.double(0.0625)
+process.l1NtupleProducer.activityFraction12 = cms.double(0.015875)
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)
@@ -79,7 +79,7 @@ process.uct2016EmulatorDigis.verbose = cms.bool(False)
 process.uct2016EmulatorDigis.ecalToken = cms.InputTag("l1tCaloLayer1Digis")
 process.uct2016EmulatorDigis.hcalToken = cms.InputTag("l1tCaloLayer1Digis")
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.source = cms.Source("PoolSource",
                             #fileNames = cms.untracked.vstring(inputFiles)#,
@@ -98,7 +98,7 @@ process.source = cms.Source("PoolSource",
                             )
 )
 
-process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:734","1:961","1:966","1:982")
+#process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:734","1:961","1:966","1:982")
 #process.source.eventsToProcess = cms.untracked.VEventRange("1:960303")
 
 process.options = cms.untracked.PSet(

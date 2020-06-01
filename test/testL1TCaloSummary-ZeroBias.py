@@ -45,7 +45,10 @@ process.load('Configuration.StandardSequences.RawToDigi_Data_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '106X_dataRun2_v10', '')
+
+process.hcalDigis.saveQIE10DataNSamples = cms.untracked.vint32( 10)
+process.hcalDigis.saveQIE10DataTags = cms.untracked.vstring( "MYDATA" )
 
 # To get L1 CaloParams
 #process.load('L1Trigger.L1TCalorimeter.caloStage2Params_cfi')
@@ -53,7 +56,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data', '')
 #process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 #process.HcalTPGCoderULUT.LUTGenerationMode = cms.bool(False)
 
-process.load('L1Trigger.Configuration.SimL1Emulator_cff')
+#process.load('L1Trigger.Configuration.SimL1Emulator_cff')
 process.load('L1Trigger.Configuration.CaloTriggerPrimitives_cff')
 
 process.load('EventFilter.L1TXRawToDigi.caloLayer1Stage2Digis_cfi')
@@ -61,11 +64,16 @@ process.load('EventFilter.L1TXRawToDigi.caloLayer1Stage2Digis_cfi')
 process.load('L1Trigger.L1TCaloSummary.uct2016EmulatorDigis_cfi')
 
 process.load("L1Trigger.Run3Ntuplizer.l1BoostedJetStudies_cfi")
-process.l1NtupleProducer.ecalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
-process.l1NtupleProducer.hcalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
-#process.l1NtupleProducer.ecalToken = cms.InputTag("l1tCaloLayer1Digis")
-#process.l1NtupleProducer.hcalToken = cms.InputTag("l1tCaloLayer1Digis")
-#process.l1NtupleProducer.activityFraction = cms.double(0.9)
+
+#process.l1NtupleProducer.isData = cms.bool(False)
+process.l1NtupleProducer.ecalToken = cms.InputTag("l1tCaloLayer1Digis")
+process.l1NtupleProducer.hcalToken = cms.InputTag("l1tCaloLayer1Digis")
+process.l1NtupleProducer.useECALLUT = cms.bool(False)
+process.l1NtupleProducer.useHCALLUT = cms.bool(False)
+process.l1NtupleProducer.useHFLUT   = cms.bool(False)
+process.l1NtupleProducer.useLSB     = cms.bool(True)
+process.l1NtupleProducer.verbose    = cms.bool(False)
+process.l1NtupleProducer.activityFraction12 = cms.double(0.015875)
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)
@@ -117,8 +125,6 @@ process.configurationMetadata = cms.untracked.PSet(
 process.out = cms.OutputModule("PoolOutputModule",
     fileName = cms.untracked.string("l1TFullEvent.root"),
     outputCommands = cms.untracked.vstring('keep *')
-    #outputCommands = cms.untracked.vstring('drop *') #'keep *_*_*_L1TCaloSummaryTest')
-    #outputCommands = cms.untracked.vstring('drop *', 'keep *_l1tCaloLayer1Digis_*_*, keep *_*_*_L1TCaloSummaryTest' )
 )
 
 
@@ -128,16 +134,17 @@ process.TFileService = cms.Service(
 	fileName = cms.string("l1TNtuple-ZeroBias.root")
 )
 
-process.p = cms.Path(process.RawToDigi*process.l1tCaloLayer1Digis*process.uct2016EmulatorDigis*process.l1NtupleProducer)
-#process.p = cms.Path(process.l1tCaloLayer1Digis*process.uct2016EmulatorDigis*process.l1NtupleProducer)
 
+process.L1TRawToDigi_Stage2 = cms.Task(process.caloLayer1Digis, process.caloStage2Digis)
+process.RawToDigi_short = cms.Sequence(process.L1TRawToDigi_Stage2)
+process.p = cms.Path(process.RawToDigi_short*process.l1tCaloLayer1Digis*process.uct2016EmulatorDigis*process.l1NtupleProducer)
 process.e = cms.EndPath(process.out)
 
 #process.schedule = cms.Schedule(process.p,process.e)
 process.schedule = cms.Schedule(process.p)
 
-from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
-associatePatAlgosToolsTask(process)
+#from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
+#associatePatAlgosToolsTask(process)
 
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete

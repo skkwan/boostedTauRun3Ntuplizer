@@ -295,7 +295,7 @@ private:
   double vbfBDT;
   double recoPt_;
   std::vector<int> nSubJets, nBHadrons, HFlav, nL1Taus;
-  std::vector<string> etaBits, phiBits, mEtaBits, mPhiBits;
+  std::vector<string> etaBits, phiBits, mEtaBits, mPhiBits, etaBits12, phiBits12, mEtaBits12, mPhiBits12;
   std::vector<std::vector<int>> subJetHFlav;
   std::vector<float> tau1, tau2, tau3;
 
@@ -451,6 +451,16 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   phiBits.clear();
   mEtaBits.clear();
   mPhiBits.clear();
+  etaBits12.clear();
+  phiBits12.clear();
+  mEtaBits12.clear();
+  mPhiBits12.clear();
+  nSubJets.clear();
+  nBHadrons.clear();
+  subJetHFlav.clear();
+  tau1.clear();
+  tau2.clear();
+  tau3.clear();
 
   // Start Running Layer 1
   edm::Handle<EcalTrigPrimDigiCollection> ecalTPs;
@@ -743,9 +753,14 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       }
       if(activeStrip) activeTowerPhiPattern |= (0x1 << iPhi);
     }
-    std::cout<<"\n";
-    std::cout<<"patterns: "<<activeTowerEtaPattern.to_string()<<"\t"<<eta_in.to_string()<<"\t"<<m_eta_in.to_string()<<std::endl;
-    std::cout<<"patterns: "<<activeTowerPhiPattern.to_string()<<"\t"<<phi_in.to_string()<<"\t"<<m_phi_in.to_string()<<std::endl;
+    bitset<12> m_eta_in12 = mergedbits(activeTowerEtaPattern); bitset<12> m_phi_in12 = mergedbits(activeTowerPhiPattern);
+    etaBits12.push_back(activeTowerEtaPattern.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    phiBits12.push_back(activeTowerPhiPattern.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    mEtaBits12.push_back(m_eta_in12.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    mPhiBits12.push_back(m_phi_in12.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    //std::cout<<"\n";
+    //std::cout<<"patterns: "<<activeTowerEtaPattern.to_string()<<"\t"<<eta_in.to_string()<<"\t"<<m_eta_in.to_string()<<std::endl;
+    //std::cout<<"patterns: "<<activeTowerPhiPattern.to_string()<<"\t"<<phi_in.to_string()<<"\t"<<m_phi_in.to_string()<<std::endl;
     //}
   }
 
@@ -904,8 +919,6 @@ void BoostedJetStudies::zeroOutAllVariables(){
   vbfBDT=-99; recoPt_=-99;
   nGenJets=-99; nRecoJets=-99; nL1Jets=-99;
   l1Matched_1=-99;
-  nSubJets.clear(); nBHadrons.clear(); subJetHFlav.clear();
-  tau1.clear(); tau2.clear(); tau3.clear();
 }
 
 void BoostedJetStudies::print() {
@@ -968,6 +981,10 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("phiBits",       &phiBits);
     tree->Branch("mEtaBits",      &mEtaBits);
     tree->Branch("mPhiBits",      &mPhiBits);
+    tree->Branch("etaBits12",       &etaBits12);
+    tree->Branch("phiBits12",       &phiBits12);
+    tree->Branch("mEtaBits12",      &mEtaBits12);
+    tree->Branch("mPhiBits12",      &mPhiBits12);
 
     tree->Branch("allRegions", "vector<TLorentzVector>", &allRegions, 32000, 0);
     tree->Branch("hcalTPGs", "vector<TLorentzVector>", &allHcalTPGs, 32000, 0);
