@@ -875,7 +875,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     int m[l1JetsSorted.size()]; 
     for (size_t i = 0; i < l1JetsSorted.size(); i++){ 
       for (size_t j = 0; j < bJetCands->size(); j++){
-        if(l1JetsSorted.at(i).pt() == bJetCands->at(j).pt()) m[i] = j;
+        if(l1JetsSorted.at(i).pt() == bJetCands->at(j).pt() && l1JetsSorted.at(i).eta() == bJetCands->at(j).eta() && l1JetsSorted.at(i).phi() == bJetCands->at(j).phi()) m[i] = j;
       }
     }
 
