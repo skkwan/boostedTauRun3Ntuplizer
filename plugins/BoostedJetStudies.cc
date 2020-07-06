@@ -723,7 +723,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     mEtaBits.push_back(m_eta_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
     mPhiBits.push_back(m_phi_in.to_string<char,std::string::traits_type,std::string::allocator_type>());
     bJetCands->push_back(L1JetParticle(math::PtEtaPhiMLorentzVector(pt, eta, phi, mass), L1JetParticle::kCentral));//using kCentral for now, need a new type
-    nL1Taus.push_back(object->nTaus());
+    //nL1Taus.push_back(object->nTaus());
     //std::cout<<"printing the tower ET:"<<std::endl;
     bool activeTower[12][12];
     uint32_t activityLevel = object->et()*activityFraction12;
@@ -762,6 +762,13 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     //std::cout<<"patterns: "<<activeTowerEtaPattern.to_string()<<"\t"<<eta_in.to_string()<<"\t"<<m_eta_in.to_string()<<std::endl;
     //std::cout<<"patterns: "<<activeTowerPhiPattern.to_string()<<"\t"<<phi_in.to_string()<<"\t"<<m_phi_in.to_string()<<std::endl;
     //}
+
+    bool activeRegion[9];
+    int nActiveRegion = 0;
+    for(int i = 0; i < 9; i++){
+      if(object->boostedJetRegionET()[i] > object->et()*16*activityFraction12 && object->boostedJetRegionTauVeto()[i] == 1) nActiveRegion++;
+    }
+    nL1Taus.push_back(nActiveRegion); 
   }
 
   /*
