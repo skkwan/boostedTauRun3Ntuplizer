@@ -73,7 +73,7 @@ process.l1NtupleProducer.useHCALLUT = cms.bool(False)
 process.l1NtupleProducer.useHFLUT   = cms.bool(False)
 process.l1NtupleProducer.useLSB     = cms.bool(True)
 process.l1NtupleProducer.verbose    = cms.bool(False)
-process.l1NtupleProducer.activityFraction12 = cms.double(0.00396875)
+process.l1NtupleProducer.activityFraction12 = cms.double(0.00390625)
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)

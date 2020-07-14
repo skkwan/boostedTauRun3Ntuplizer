@@ -69,7 +69,7 @@ process.l1NtupleProducer.ecalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCa
 #process.l1NtupleProducer.hcalToken = cms.InputTag("hcalDigis")
 process.l1NtupleProducer.hcalToken = cms.InputTag("l1tCaloLayer1Digis","","L1TCaloSummaryTest")
 #process.l1NtupleProducer.activityFraction = cms.double(0.9)
-process.l1NtupleProducer.activityFraction12 = cms.double(0.00396875)
+process.l1NtupleProducer.activityFraction12 = cms.double(0.00390625)
 
 process.uct2016EmulatorDigis.useECALLUT = cms.bool(False)
 process.uct2016EmulatorDigis.useHCALLUT = cms.bool(False)
@@ -99,7 +99,7 @@ process.source = cms.Source("PoolSource",
 )
 
 #process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange("1:734","1:961","1:966","1:982")
-#process.source.eventsToProcess = cms.untracked.VEventRange("1:960303")
+#process.source.eventsToProcess = cms.untracked.VEventRange("1:960110","1:965580")
 
 process.options = cms.untracked.PSet(
 
