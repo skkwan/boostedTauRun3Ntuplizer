@@ -295,7 +295,7 @@ private:
   double vbfBDT;
   double recoPt_;
   std::vector<int> nSubJets, nBHadrons, HFlav, nL1Taus;
-  std::vector<string> etaBits, phiBits, mEtaBits, mPhiBits, etaBits12, phiBits12, mEtaBits12, mPhiBits12;
+  std::vector<string> etaBits, phiBits, mEtaBits, mPhiBits, etaBits12, phiBits12, mEtaBits12, mPhiBits12, regionEta, regionPhi;
   std::vector<std::vector<int>> subJetHFlav;
   std::vector<float> tau1, tau2, tau3;
 
@@ -455,6 +455,8 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   phiBits12.clear();
   mEtaBits12.clear();
   mPhiBits12.clear();
+  regionEta.clear();
+  regionPhi.clear();
   nSubJets.clear();
   nBHadrons.clear();
   subJetHFlav.clear();
@@ -763,12 +765,29 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     //std::cout<<"patterns: "<<activeTowerPhiPattern.to_string()<<"\t"<<phi_in.to_string()<<"\t"<<m_phi_in.to_string()<<std::endl;
     //}
 
-    bool activeRegion[9];
     int nActiveRegion = 0;
     for(int i = 0; i < 9; i++){
       if(object->boostedJetRegionET()[i] > object->et()*16*activityFraction12 && object->boostedJetRegionTauVeto()[i] == 1) nActiveRegion++;
     }
     nL1Taus.push_back(nActiveRegion); 
+    bitset<3> activeRegionEtaPattern = 0;
+    for(uint32_t iEta = 0; iEta < 3; iEta++){
+      bool activeStrip = false;
+      for(uint32_t iPhi = 0; iPhi < 3; iPhi++){
+        if(object->boostedJetRegionET()[3*iEta+iPhi] > object->et()*16*activityFraction12 && object->boostedJetRegionTauVeto()[3*iEta+iPhi] == 1) activeStrip = true;
+      }
+      if(activeStrip) activeRegionEtaPattern |= (0x1 << iEta);
+    }
+    bitset<3> activeRegionPhiPattern = 0;
+    for(uint32_t iPhi = 0; iPhi < 3; iPhi++){
+      bool activeStrip = false;
+      for(uint32_t iEta = 0; iEta < 3; iEta++){
+        if(object->boostedJetRegionET()[3*iEta+iPhi] > object->et()*16*activityFraction12 && object->boostedJetRegionTauVeto()[3*iEta+iPhi] == 1) activeStrip = true;
+      }
+      if(activeStrip) activeRegionPhiPattern |= (0x1 << iPhi);
+    }
+    regionEta.push_back(activeRegionEtaPattern.to_string<char,std::string::traits_type,std::string::allocator_type>());
+    regionPhi.push_back(activeRegionPhiPattern.to_string<char,std::string::traits_type,std::string::allocator_type>());
   }
 
   /*
@@ -992,6 +1011,8 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("phiBits12",       &phiBits12);
     tree->Branch("mEtaBits12",      &mEtaBits12);
     tree->Branch("mPhiBits12",      &mPhiBits12);
+    tree->Branch("regionEta",       &regionEta);
+    tree->Branch("regionPhi",       &regionPhi);
 
     tree->Branch("allRegions", "vector<TLorentzVector>", &allRegions, 32000, 0);
     tree->Branch("hcalTPGs", "vector<TLorentzVector>", &allHcalTPGs, 32000, 0);
