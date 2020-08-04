@@ -774,7 +774,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     for(uint32_t iEta = 0; iEta < 3; iEta++){
       bool activeStrip = false;
       for(uint32_t iPhi = 0; iPhi < 3; iPhi++){
-        if(object->boostedJetRegionET()[3*iEta+iPhi] > object->et()*16*activityFraction12 && object->boostedJetRegionTauVeto()[3*iEta+iPhi] == 1) activeStrip = true;
+        if(object->boostedJetRegionET()[3*iEta+iPhi] > 30 && object->boostedJetRegionET()[3*iEta+iPhi] > object->et()*16*activityFraction12 && object->boostedJetRegionTauVeto()[3*iEta+iPhi] == 1) activeStrip = true;
       }
       if(activeStrip) activeRegionEtaPattern |= (0x1 << iEta);
     }
