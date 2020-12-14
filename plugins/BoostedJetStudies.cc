@@ -72,6 +72,9 @@
 #include "DataFormats/L1Trigger/interface/Tau.h"
 #include "DataFormats/L1Trigger/interface/Muon.h"
 
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 
 #include "L1Trigger/L1TCaloLayer1/src/L1TCaloLayer1FetchLUTs.hh"
 #include <bitset>
@@ -232,12 +235,13 @@ private:
   void print();
 
   // ----------member data ---------------------------
-  edm::InputTag genSrc_;
+  //edm::InputTag genSrc_;
   edm::EDGetTokenT<EcalTrigPrimDigiCollection> ecalTPSource;
   std::string ecalTPSourceLabel;
   edm::EDGetTokenT<HcalTrigPrimDigiCollection> hcalTPSource;
   std::string hcalTPSourceLabel;
 
+  edm::EDGetTokenT<reco::GenParticleCollection> genSrc_;
   edm::EDGetTokenT<vector<pat::Jet> > jetSrc_;
   edm::EDGetTokenT<vector<pat::Jet> > jetSrcAK8_;
 
@@ -284,7 +288,8 @@ private:
   TTree* l1Tree;
   int run, lumi, event;
 
-  double genPt_1, genEta_1, genPhi_1;
+  double genPt_1, genEta_1, genPhi_1, genM_1, genDR;
+  int genId, genMother;
   double recoPt_1, recoEta_1, recoPhi_1;
   double l1Pt_1, l1Eta_1, l1Phi_1;
   
@@ -353,7 +358,8 @@ BoostedJetStudies::BoostedJetStudies(const edm::ParameterSet& iConfig) :
 		iConfig.getParameter<double>("miscActivityFraction")),
   jetSrc_(    consumes<vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("recoJets"))),
   jetSrcAK8_( consumes<vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("recoJetsAK8"))),
-  genSrc_((        iConfig.getParameter<edm::InputTag>( "genParticles"))),
+  //genSrc_((        iConfig.getParameter<edm::InputTag>( "genParticles"))),
+  genSrc_( consumes<reco::GenParticleCollection> (iConfig.getParameter<edm::InputTag>( "genParticles"))),
   activityFraction12(iConfig.getParameter<double>("activityFraction12"))
 {
   std::vector<double> pumLUTData;
@@ -827,6 +833,7 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
   // Finish Running Layer 1
 
   // Start Runing Analysis
+
   Handle<vector<pat::Jet> > jets;
   if(evt.getByToken(jetSrc_, jets)){//Begin Getting Reco Taus
     for (const pat::Jet &jet : *jets) {
@@ -930,13 +937,30 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
         i++;
       }
     }
-  }  
+  }
+
+  edm::Handle<reco::GenParticleCollection> genParticles;
+  if(evt.getByToken(genSrc_, genParticles)){//Begin Getting Gen Particles
+    for (reco::GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++){
+      //std::cout<<std::dec<<genparticle->pdgId()<<"\t"<<genparticle->status()<<std::endl;
+      double DR = reco::deltaR(l1Eta_1, l1Phi_1, genparticle->eta(), genparticle->phi());
+      if (DR < genDR && genparticle->status() > 21 && genparticle->status() < 41){
+        genDR = DR;
+        genId = genparticle->pdgId();
+        genMother = genparticle->motherRef(0)->pdgId();
+        genPt_1 = genparticle->pt();
+        genEta_1 = genparticle->eta();
+        genPhi_1 = genparticle->phi();
+        genM_1 = genparticle->mass();
+      }
+    }
+  }
 
   efficiencyTree->Fill();
 }
 
 void BoostedJetStudies::zeroOutAllVariables(){
-  genPt_1=-99; genEta_1=-99; genPhi_1=-99;
+  genPt_1=-99; genEta_1=-99; genPhi_1=-99; genM_1=-99; genDR=99; genId=-99; genMother=-99;
   recoPt_1=-99; recoEta_1=-99; recoPhi_1=-99;
   l1Pt_1=-99; l1Eta_1=-99; l1Phi_1=-99;
   l1NthJet_1=-99; 
@@ -979,6 +1003,14 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("run",     &run,     "run/I");
     tree->Branch("lumi",    &lumi,    "lumi/I");
     tree->Branch("event",   &event,   "event/I");
+
+    tree->Branch("genPt_1",       &genPt_1,     "genPt_1/D");
+    tree->Branch("genEta_1",      &genEta_1,    "genEta_1/D");
+    tree->Branch("genPhi_1",      &genPhi_1,    "genPhi_1/D");
+    tree->Branch("genM_1",        &genM_1,      "genM_1/D");
+    tree->Branch("genDR",         &genDR,       "genDR/D");
+    tree->Branch("genId",         &genId,       "genId/I");
+    tree->Branch("genMother",     &genMother,   "genMother/I");
 
     tree->Branch("recoPt_1",      &recoPt_1,     "recoPt_1/D");
     tree->Branch("recoEta_1",     &recoEta_1,    "recoEta_1/D");
