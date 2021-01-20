@@ -242,6 +242,7 @@ private:
   std::string hcalTPSourceLabel;
 
   edm::EDGetTokenT<reco::GenParticleCollection> genSrc_;
+  edm::EDGetTokenT<vector<pat::Tau> > tauSrc_;
   edm::EDGetTokenT<vector<pat::Jet> > jetSrc_;
   edm::EDGetTokenT<vector<pat::Jet> > jetSrcAK8_;
 
@@ -311,6 +312,7 @@ private:
   std::vector<TLorentzVector> *l1Jets  = new std::vector<TLorentzVector>;
   std::vector<TLorentzVector> *ak8Jets  = new std::vector<TLorentzVector>;
   std::vector<TLorentzVector> *subJets  = new std::vector<TLorentzVector>;
+  std::vector<TLorentzVector> *boostedTaus = new std::vector<TLorentzVector>;
 
   int nGenJets, nRecoJets, nL1Jets;
   int l1Matched_1;
@@ -360,6 +362,7 @@ BoostedJetStudies::BoostedJetStudies(const edm::ParameterSet& iConfig) :
   jetSrcAK8_( consumes<vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("recoJetsAK8"))),
   //genSrc_((        iConfig.getParameter<edm::InputTag>( "genParticles"))),
   genSrc_( consumes<reco::GenParticleCollection> (iConfig.getParameter<edm::InputTag>( "genParticles"))),
+  tauSrc_( consumes<vector<pat::Tau> >(iConfig.getParameter<edm::InputTag>( "boostedTaus"))),
   activityFraction12(iConfig.getParameter<double>("activityFraction12"))
 {
   std::vector<double> pumLUTData;
@@ -444,12 +447,14 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
    
   std::vector<pat::Jet> goodJets;
   std::vector<pat::Jet> goodJetsAK8;
+  std::vector<pat::Tau> goodTaus;
 
   allRegions->clear();
   allEcalTPGs->clear();
   allHcalTPGs->clear();
   caloClusters->clear();
   l1Jets->clear();
+  boostedTaus->clear();
   ak8Jets->clear();
   subJets->clear();
   nL1Taus.clear();
@@ -853,17 +858,12 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
 
   if(evt.getByToken(jetSrcAK8_, jetsAK8)){//Begin Getting Reco Jets
     for (const pat::Jet &jetAK8 : *jetsAK8) {
-      //recoJetAK8_pt->Fill( jetAK8.pt() );
-      //recoJetAK8_eta->Fill( jetAK8.eta() );
-      //recoJetAK8_phi->Fill( jetAK8.phi() );
-      //get rid of the cruft for analysis to save disk space
       if(jetAK8.pt() > recoPt_ ) {
         nSubJets.push_back(jetAK8.subjets("SoftDropPuppi").size());
         nBHadrons.push_back(jetAK8.jetFlavourInfo().getbHadrons().size());
         TLorentzVector temp ;
         temp.SetPtEtaPhiE(jetAK8.pt(),jetAK8.eta(),jetAK8.phi(),jetAK8.et());
         ak8Jets->push_back(temp);
-        //if(jetAK8.subjets("SoftDropPuppi").size() > 1 && jetAK8.jetFlavourInfo().getbHadrons().size() == 2 && jetAK8.userFloat("NjettinessAK8Puppi:tau1") > jetAK8.userFloat("NjettinessAK8Puppi:tau2")){
         if(jetAK8.subjets("SoftDropPuppi").size() ==  2 && jetAK8.jetFlavourInfo().getbHadrons().size() > 1){
           goodJetsAK8.push_back(jetAK8);
         }
@@ -874,31 +874,46 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
     cout<<"Error getting AK8 jets"<<std::endl;
   std::cout<<"AK8 jets size: "<<jetsAK8->size()<<std::endl;
 
+  Handle<vector<pat::Tau> > taus;
+  if(evt.getByToken(tauSrc_, taus)){
+    for (const pat::Tau &itau : *taus) {
+      if(itau.pt() > recoPt_ ) {
+        goodTaus.push_back(itau);
+        TLorentzVector temp ;
+        temp.SetPtEtaPhiE(itau.pt(),itau.eta(),itau.phi(),itau.et());
+        boostedTaus->push_back(temp);
+      }
+    }
+  } 
+
   zeroOutAllVariables();
 
-  if(goodJetsAK8.size()>0){
+  if(boostedTaus->size()>0){
 
-    for(auto jet:goodJetsAK8){
-      tau1.push_back(jet.userFloat("NjettinessAK8Puppi:tau1"));
-      tau2.push_back(jet.userFloat("NjettinessAK8Puppi:tau2"));
-      tau3.push_back(jet.userFloat("NjettinessAK8Puppi:tau3"));
-      //nSubJets.push_back(jet.subjets("SoftDropPuppi").size());
-      HFlav.clear();
-      for(unsigned int isub=0; isub<((jet.subjets("SoftDropPuppi")).size()); isub++){
-        HFlav.push_back(jet.subjets("SoftDropPuppi")[isub]->hadronFlavour());
-        TLorentzVector temp;
-        temp.SetPtEtaPhiE(jet.subjets("SoftDropPuppi")[isub]->pt(),jet.subjets("SoftDropPuppi")[isub]->eta(),jet.subjets("SoftDropPuppi")[isub]->phi(),jet.subjets("SoftDropPuppi")[isub]->et());
-        subJets->push_back(temp);
+    if(goodJetsAK8.size()>0){
+
+      for(auto jet:goodJetsAK8){
+        tau1.push_back(jet.userFloat("NjettinessAK8Puppi:tau1"));
+        tau2.push_back(jet.userFloat("NjettinessAK8Puppi:tau2"));
+        tau3.push_back(jet.userFloat("NjettinessAK8Puppi:tau3"));
+        //nSubJets.push_back(jet.subjets("SoftDropPuppi").size());
+        HFlav.clear();
+        for(unsigned int isub=0; isub<((jet.subjets("SoftDropPuppi")).size()); isub++){
+          HFlav.push_back(jet.subjets("SoftDropPuppi")[isub]->hadronFlavour());
+          TLorentzVector temp;
+          temp.SetPtEtaPhiE(jet.subjets("SoftDropPuppi")[isub]->pt(),jet.subjets("SoftDropPuppi")[isub]->eta(),jet.subjets("SoftDropPuppi")[isub]->phi(),jet.subjets("SoftDropPuppi")[isub]->et());
+          subJets->push_back(temp);
+        }
+        subJetHFlav.push_back(HFlav);
+        //nBHadrons.push_back(jet.jetFlavourInfo().getbHadrons().size());
+        std::cout<<"N subjets: "<< jet.subjets("SoftDropPuppi").size()<<std::endl;
+        std::cout<<"N BHadrons: "<< jet.jetFlavourInfo().getbHadrons().size()<<std::endl;
+        //take more variables from here: https://github.com/gouskos/HiggsToBBNtupleProducerTool/blob/opendata_80X/NtupleAK8/src/FatJetInfoFiller.cc#L215-L217
+        // https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideBTagMCTools
       }
-      subJetHFlav.push_back(HFlav);
-      //nBHadrons.push_back(jet.jetFlavourInfo().getbHadrons().size());
-      std::cout<<"N subjets: "<< jet.subjets("SoftDropPuppi").size()<<std::endl;
-      std::cout<<"N BHadrons: "<< jet.jetFlavourInfo().getbHadrons().size()<<std::endl;
-      //take more variables from here: https://github.com/gouskos/HiggsToBBNtupleProducerTool/blob/opendata_80X/NtupleAK8/src/FatJetInfoFiller.cc#L215-L217
-      // https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideBTagMCTools
     }
 
-    //Match to boosted jets and see if we can match subjettiness functions...
+    //Match to boosted taus
     vector<l1extra::L1JetParticle> l1JetsSorted;
     for( vector<l1extra::L1JetParticle>::const_iterator l1Jet = bJetCands->begin(); l1Jet != bJetCands->end(); l1Jet++ ){
       l1JetsSorted.push_back(*l1Jet);
@@ -912,13 +927,13 @@ void BoostedJetStudies::analyze( const edm::Event& evt, const edm::EventSetup& e
       }
     }
 
-    pat::Jet recoJet_1;
-
-    recoPt_1  = goodJetsAK8.at(0).pt();
-    recoEta_1 = goodJetsAK8.at(0).eta();
-    recoPhi_1 = goodJetsAK8.at(0).phi();
-    recoJet_1 = goodJetsAK8.at(0);
-
+    pat::Tau recoJet_1;
+  
+    recoPt_1  = boostedTaus->at(0).Pt();
+    recoEta_1 = boostedTaus->at(0).Eta();
+    recoPhi_1 = boostedTaus->at(0).Phi();
+    recoJet_1 = goodTaus.at(0);
+  
     int i = 0;
     int foundL1Jet_1 = 0;
     l1extra::L1JetParticle l1Jet_1;
@@ -1053,6 +1068,7 @@ void BoostedJetStudies::createBranches(TTree *tree){
     tree->Branch("l1Jets", "vector<TLorentzVector>", &l1Jets, 32000, 0);
     tree->Branch("ak8Jets", "vector<TLorentzVector>", &ak8Jets, 32000, 0);
     tree->Branch("subJets", "vector<TLorentzVector>", &subJets, 32000, 0);
+    tree->Branch("boostedTaus", "vector<TLorentzVector>", &boostedTaus, 32000, 0);
   }
 
 
